@@ -22,4 +22,11 @@ public class ProductResponse {
     // Chỉ trả về thông tin cơ bản của Category, không embed toàn bộ object
     private Long categoryId;
     private String categoryName;
+
+    // Đánh giá
+    private Double averageRating;
+    private Long reviewCount;
+
+    // Hình ảnh phụ
+    private java.util.List<String> galleryImages;
 }

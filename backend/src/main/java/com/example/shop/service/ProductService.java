@@ -27,4 +27,10 @@ public interface ProductService {
 
     /** Tìm kiếm theo từ khoá */
     Page<ProductResponse> searchProducts(String keyword, Pageable pageable);
+
+    /** Thêm review */
+    ReviewResponse addReview(Long productId, String userEmail, ReviewRequest request);
+
+    /** Lấy danh sách review của 1 product */
+    Page<ReviewResponse> getReviewsByProduct(Long productId, Pageable pageable);
 }

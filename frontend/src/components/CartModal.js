@@ -5,7 +5,7 @@ import {
   ChevronRight, CheckCircle, Loader2, Lock
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { createOrder } from '../services/api';
+import { createOrder, validateCoupon, createPaymentUrl } from '../services/api';
 import './CartModal.css';
 
 const formatVND = (n) =>
@@ -25,6 +25,13 @@ export default function CartModal() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [orderRef, setOrderRef] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('COD');
+  
+  // Coupon state
+  const [couponCodeInput, setCouponCodeInput] = useState('');
+  const [couponError, setCouponError] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
 
   const overlayRef = useRef(null);
 
@@ -56,6 +63,27 @@ export default function CartModal() {
     return Object.keys(errs).length === 0;
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponCodeInput.trim()) return;
+    setCouponError('');
+    try {
+      const res = await validateCoupon(couponCodeInput, cartTotal);
+      setAppliedCoupon(res.data);
+      if (res.data.discountType === 'PERCENT') {
+        setDiscountAmount((cartTotal * res.data.discountValue) / 100);
+      } else {
+        setDiscountAmount(res.data.discountValue);
+      }
+      addToast('Áp dụng mã giảm giá thành công!', 'success');
+    } catch (err) {
+      setCouponError(err.response?.data || 'Mã giảm giá không hợp lệ.');
+      setAppliedCoupon(null);
+      setDiscountAmount(0);
+    }
+  };
+
+  const finalTotal = Math.max(0, cartTotal - discountAmount);
+
   /* ── Place order ── */
   const handleOrder = async () => {
     if (!validate()) return;
@@ -64,15 +92,27 @@ export default function CartModal() {
       const res = await createOrder({
         customerName:  form.customerName,
         customerEmail: form.customerEmail,
-        totalAmount:   cartTotal,
+        phone: form.phone,
+        address: form.address,
+        paymentMethod: paymentMethod,
+        totalAmount:   finalTotal,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
         items: cart.map(i => ({
           productId: i.id,
           quantity:  i.quantity,
           unitPrice: i.price,
         })),
       });
-      setOrderRef(res?.data?.id || 'ORD-' + Date.now());
+      const orderId = res?.data?.id;
+      setOrderRef(orderId || 'ORD-' + Date.now());
       clearCart();
+      
+      if (paymentMethod === 'VNPAY' && orderId) {
+        const payRes = await createPaymentUrl(orderId);
+        window.location.href = payRes.data.url;
+        return;
+      }
+      
       setStep(STEP_SUCCESS);
     } catch {
       addToast('Đặt hàng thất bại. Vui lòng thử lại!', 'error');
@@ -225,8 +265,40 @@ export default function CartModal() {
                     ))}
                   </div>
                   <div className="co-total-row">
-                    <span>Tổng</span>
+                    <span>Tạm tính</span>
                     <span>{formatVND(cartTotal)}</span>
+                  </div>
+                  {appliedCoupon && (
+                    <div className="co-total-row" style={{ color: 'var(--success)' }}>
+                      <span>Giảm giá ({appliedCoupon.code})</span>
+                      <span>-{formatVND(discountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="co-total-row" style={{ fontWeight: 600, fontSize: '1.1rem', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #eee' }}>
+                    <span>Tổng cộng</span>
+                    <span>{formatVND(finalTotal)}</span>
+                  </div>
+
+                  {/* Coupon Form */}
+                  <div style={{ marginTop: '15px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Mã giảm giá" 
+                        value={couponCodeInput}
+                        onChange={(e) => setCouponCodeInput(e.target.value)}
+                        className="co-input"
+                        style={{ margin: 0, textTransform: 'uppercase' }}
+                        disabled={appliedCoupon != null}
+                      />
+                      <button 
+                        onClick={appliedCoupon ? () => { setAppliedCoupon(null); setDiscountAmount(0); setCouponCodeInput(''); } : handleApplyCoupon}
+                        style={{ padding: '0 15px', background: appliedCoupon ? '#ff4d4f' : '#111', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        {appliedCoupon ? 'Huỷ' : 'Áp dụng'}
+                      </button>
+                    </div>
+                    {couponError && <p style={{ color: 'red', fontSize: '12px', marginTop: '5px' }}>{couponError}</p>}
                   </div>
                 </div>
 
@@ -272,6 +344,32 @@ export default function CartModal() {
                       className={`co-input co-textarea ${errors.address ? 'err' : ''}`}
                     />
                   </Field>
+
+                  <div className="co-field" style={{ marginTop: '15px' }}>
+                    <label className="co-field__label">Phương thức thanh toán</label>
+                    <div style={{ display: 'flex', gap: '15px', marginTop: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <input 
+                          type="radio" 
+                          name="paymentMethod" 
+                          value="COD" 
+                          checked={paymentMethod === 'COD'}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        />
+                        Thanh toán khi nhận hàng (COD)
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <input 
+                          type="radio" 
+                          name="paymentMethod" 
+                          value="VNPAY" 
+                          checked={paymentMethod === 'VNPAY'}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        />
+                        Thanh toán qua VNPay
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -284,7 +382,7 @@ export default function CartModal() {
               >
                 {loading
                   ? <><Loader2 size={16} className="spin" /> Đang xử lý...</>
-                  : <><Lock size={15} /> Đặt Hàng — {formatVND(cartTotal)}</>
+                  : <><Lock size={15} /> Đặt Hàng — {formatVND(finalTotal)}</>
                 }
               </button>
               <button

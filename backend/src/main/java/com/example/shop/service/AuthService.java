@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.UUID;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -31,6 +32,7 @@ public class AuthService {
     private final UserRepository            userRepository;
     private final RefreshTokenRepository    refreshTokenRepository;
     private final VerificationTokenRepository verificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder           passwordEncoder;
     private final JwtUtils                  jwtUtils;
     private final AuthenticationManager     authenticationManager;
@@ -202,6 +204,46 @@ public class AuthService {
     @Transactional
     public void logout(String email) {
         userRepository.findByEmail(email).ifPresent(refreshTokenRepository::deleteByUser);
+    }
+
+    // ── FORGOT PASSWORD ───────────────────────────────────────────
+    @Transactional
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với email này."));
+
+        // Xoá token cũ
+        passwordResetTokenRepository.deleteByUserId(user.getId());
+
+        // Tạo token mới (15 phút)
+        String tokenValue = UUID.randomUUID().toString();
+        PasswordResetToken prt = PasswordResetToken.builder()
+                .token(tokenValue)
+                .user(user)
+                .expiryDate(LocalDateTime.now().plusMinutes(15))
+                .build();
+        passwordResetTokenRepository.save(prt);
+
+        // Gửi email
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), tokenValue);
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken prt = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Token không hợp lệ hoặc đã được sử dụng."));
+
+        if (prt.getExpiryDate().isBefore(LocalDateTime.now())) {
+            passwordResetTokenRepository.delete(prt);
+            throw new IllegalArgumentException("Token đã hết hạn. Vui lòng gửi lại yêu cầu.");
+        }
+
+        User user = prt.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Xoá token
+        passwordResetTokenRepository.delete(prt);
     }
 
     // ── HELPERS ─────────────────────────────────────────────────

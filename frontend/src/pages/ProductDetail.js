@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft, Star, Truck, Shield, RotateCcw, Loader2, Eye } from 'lucide-react';
-import { getProductById } from '../services/api';
+import { getProductById, getReviews, addReview } from '../services/api';
 import { useCart } from '../context/CartContext';
 import './ProductDetail.css';
 
@@ -17,28 +17,52 @@ export default function ProductDetail() {
   const [qty, setQty]         = useState(1);
   const [added, setAdded]     = useState(false);
 
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewText, setReviewText] = useState('');
+  const [rating, setRating] = useState(5);
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const [activeImage, setActiveImage] = useState('');
+
   useEffect(() => {
     setLoading(true);
     setAdded(false);
-    getProductById(id)
-      .then(r => setProduct(r.data))
+    Promise.all([
+      getProductById(id),
+      getReviews(id, 0, 10)
+    ])
+      .then(([prodRes, revRes]) => {
+        setProduct(prodRes.data);
+        setActiveImage(prodRes.data.imageUrl);
+        setReviews(revRes.data.content);
+      })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
   }, [id]);
 
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!reviewText.trim()) return;
+    try {
+      setSubmittingReview(true);
+      const res = await addReview(id, { rating, comment: reviewText });
+      setReviews([res.data, ...reviews]);
+      setReviewText('');
+      setRating(5);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Có lỗi khi gửi đánh giá');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   const handleAdd = () => {
     if (!product) return;
-    // Add qty times (or just add once and update — here we add once with quantity adjustment)
     addToCart({ ...product, _addQty: qty });
-    // Since context adds 1 per call, call multiple times
     for (let i = 1; i < qty; i++) addToCart(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
-  };
-
-  const handleAddAndView = () => {
-    handleAdd();
-    setTimeout(openModal, 400);
   };
 
   if (loading) return (
@@ -54,19 +78,40 @@ export default function ProductDetail() {
     </div>
   );
 
+  const allImages = [product.imageUrl, ...(product.galleryImages || [])].filter(Boolean);
+
   return (
     <div className="pd-page">
       <div className="pd-container">
         <Link to="/" className="back-link"><ArrowLeft size={16}/> Tiếp tục mua sắm</Link>
 
         <div className="pd-grid">
-          {/* Image */}
-          <div className="pd-img-wrap">
-            <img
-              src={product.imageUrl || `https://picsum.photos/seed/${product.id}/600/500`}
-              alt={product.name}
-            />
-            <div className="pd-img-shine" />
+          {/* Image Gallery */}
+          <div className="pd-gallery">
+            <div className="pd-img-wrap">
+              <img
+                src={activeImage || `https://picsum.photos/seed/${product.id}/600/500`}
+                alt={product.name}
+              />
+              <div className="pd-img-shine" />
+            </div>
+            {allImages.length > 1 && (
+              <div className="pd-thumbnails" style={{ display: 'flex', gap: '10px', marginTop: '15px', overflowX: 'auto' }}>
+                {allImages.map((img, idx) => (
+                  <img 
+                    key={idx} 
+                    src={img} 
+                    alt="Thumbnail" 
+                    onClick={() => setActiveImage(img)}
+                    style={{ 
+                      width: '80px', height: '80px', objectFit: 'cover', cursor: 'pointer',
+                      border: activeImage === img ? '2px solid var(--gold)' : '1px solid #ddd',
+                      borderRadius: '4px'
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Info */}
@@ -79,11 +124,11 @@ export default function ProductDetail() {
             <div className="pd-rating">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} size={14}
-                  fill={i < 4 ? 'currentColor' : 'none'}
-                  style={{ color: i < 4 ? 'var(--gold)' : 'var(--border)' }}
+                  fill={i < Math.round(product.averageRating || 0) ? 'currentColor' : 'none'}
+                  style={{ color: i < Math.round(product.averageRating || 0) ? 'var(--gold)' : 'var(--border)' }}
                 />
               ))}
-              <span>(128 đánh giá)</span>
+              <span>({product.reviewCount || 0} đánh giá)</span>
             </div>
 
             <div className="pd-price">{formatVND(product.price)}</div>
@@ -125,6 +170,62 @@ export default function ProductDetail() {
               <div className="perk"><Shield size={16}/><span>Bảo hành 12 tháng chính hãng</span></div>
               <div className="perk"><RotateCcw size={16}/><span>Đổi trả trong vòng 30 ngày</span></div>
             </div>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="pd-reviews-section" style={{ marginTop: '60px', borderTop: '1px solid #eee', paddingTop: '40px' }}>
+          <h2 style={{ fontSize: '24px', marginBottom: '20px', fontFamily: 'var(--font-serif)' }}>Đánh giá Sản phẩm</h2>
+          
+          <form onSubmit={handleReviewSubmit} style={{ marginBottom: '40px', background: '#f9f9f9', padding: '20px', borderRadius: '8px' }}>
+            <h3 style={{ fontSize: '16px', marginBottom: '15px' }}>Viết đánh giá của bạn</h3>
+            <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star 
+                  key={star} 
+                  size={20} 
+                  onClick={() => setRating(star)}
+                  style={{ cursor: 'pointer', color: star <= rating ? 'var(--gold)' : '#ccc' }}
+                  fill={star <= rating ? 'currentColor' : 'none'}
+                />
+              ))}
+            </div>
+            <textarea 
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."
+              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', minHeight: '80px', marginBottom: '15px', fontFamily: 'inherit' }}
+            />
+            <button 
+              type="submit" 
+              disabled={submittingReview}
+              style={{ padding: '10px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+            >
+              {submittingReview ? 'Đang gửi...' : 'Gửi Đánh Giá'}
+            </button>
+          </form>
+
+          <div className="pd-reviews-list">
+            {reviews.length === 0 ? (
+              <p style={{ color: '#666', fontStyle: 'italic' }}>Chưa có đánh giá nào cho sản phẩm này.</p>
+            ) : (
+              reviews.map(review => (
+                <div key={review.id} style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <strong>{review.userName}</strong>
+                    <div style={{ display: 'flex' }}>
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={12} fill={i < review.rating ? 'var(--gold)' : 'none'} color={i < review.rating ? 'var(--gold)' : '#ccc'} />
+                      ))}
+                    </div>
+                    <span style={{ color: '#999', fontSize: '12px', marginLeft: 'auto' }}>
+                      {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                    </span>
+                  </div>
+                  <p style={{ color: '#444', lineHeight: 1.5 }}>{review.comment}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
