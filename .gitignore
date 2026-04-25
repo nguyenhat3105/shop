@@ -1,0 +1,28 @@
+# --- Frontend (React/Vite/Node) ---
+node_modules/
+dist/
+.env
+.env.local
+npm-debug.log*
+
+# --- Backend (Java/Spring Boot/Maven) ---
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/
+mvnw
+mvnw.cmd
+
+# --- IDE & System Files ---
+.idea/
+.vscode/
+*.swp
+*.metadata
+.classpath
+.project
+.settings/
+bin/
+.DS_Store
+Thumbs.db
