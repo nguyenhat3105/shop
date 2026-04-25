@@ -42,6 +42,7 @@ api.interceptors.response.use(
 // ── AUTH ──────────────────────────────────────────────────────
 export const register   = (data)  => axios.post(`${API_BASE}/auth/register`, data);
 export const login      = (data)  => axios.post(`${API_BASE}/auth/login`, data);
+export const loginWithGoogle = (token) => axios.post(`${API_BASE}/auth/google`, { token });
 export const logout     = ()      => api.post(`/auth/logout`);
 export const verifyEmail= (token) => axios.get(`${API_BASE}/auth/verify`, { params: { token } });
 export const getMe      = ()      => api.get(`/auth/me`);

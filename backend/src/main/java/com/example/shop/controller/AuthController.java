@@ -45,6 +45,17 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    /** POST /api/auth/google */
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(
+            @RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(authService.loginWithGoogle(token));
+    }
+
     /** POST /api/auth/refresh */
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(

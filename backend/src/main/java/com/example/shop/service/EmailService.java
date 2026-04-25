@@ -109,6 +109,48 @@ public class EmailService {
         sendHtml(toEmail, "🎉 Chào mừng đến LuxeShop!", html);
     }
 
+    @Async
+    public void sendGoogleRegisterPasswordEmail(String toEmail, String fullName, String password) {
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8"/>
+              <style>
+                body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f3ef; margin: 0; padding: 0; }
+                .wrapper { max-width: 560px; margin: 40px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+                .header { background: #1a1a1a; padding: 32px 40px; text-align: center; }
+                .header h1 { color: #b8955a; font-size: 28px; margin: 0; letter-spacing: 4px; font-weight: 300; }
+                .body { padding: 40px; text-align: center; }
+                .icon { font-size: 52px; margin-bottom: 16px; }
+                .body h2 { color: #111; font-size: 22px; margin: 0 0 12px; font-weight: 500; }
+                .body p { color: #555; font-size: 15px; line-height: 1.7; margin: 0 0 20px; }
+                .password-box { display: inline-block; background: #f0f0f0; padding: 12px 24px; font-size: 20px; letter-spacing: 2px; border-radius: 6px; font-weight: bold; color: #111; margin-bottom: 20px; }
+                .btn { display: inline-block; padding: 13px 36px; background: #1a1a1a; color: #fff !important; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; margin-top: 8px; }
+                .footer { background: #f5f3ef; padding: 20px 40px; text-align: center; font-size: 12px; color: #aaa; }
+              </style>
+            </head>
+            <body>
+              <div class="wrapper">
+                <div class="header"><h1>LUXE</h1></div>
+                <div class="body">
+                  <div class="icon">🚀</div>
+                  <h2>Chào mừng đến với LuxeShop, %s!</h2>
+                  <p>Tài khoản của bạn đã được tạo thành công thông qua đăng nhập Google.</p>
+                  <p>Dưới đây là mật khẩu mặc định của bạn. Hãy sử dụng nó nếu bạn muốn đăng nhập bằng Email và Mật khẩu. Bạn có thể đổi mật khẩu này sau.</p>
+                  <div class="password-box">%s</div>
+                  <br>
+                  <a href="%s" class="btn">Mua Sắm Ngay →</a>
+                </div>
+                <div class="footer">© 2025 LuxeShop. Bảo lưu mọi quyền.</div>
+              </div>
+            </body>
+            </html>
+            """.formatted(fullName, password, frontendUrl);
+
+        sendHtml(toEmail, "🔑 Mật khẩu tài khoản LuxeShop của bạn", html);
+    }
+
     private void sendHtml(String to, String subject, String htmlContent) {
         try {
             MimeMessage msg = mailSender.createMimeMessage();

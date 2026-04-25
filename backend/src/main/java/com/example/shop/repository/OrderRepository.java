@@ -14,6 +14,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // Tìm đơn hàng theo email khách hàng
     List<Order> findByCustomerEmail(String customerEmail);
+    Page<Order> findByCustomerEmail(String customerEmail, Pageable pageable);
 
     // Tìm đơn hàng theo trạng thái (có phân trang)
     Page<Order> findByStatus(OrderStatus status, Pageable pageable);
