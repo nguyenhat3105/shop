@@ -10,4 +10,5 @@ public interface OrderService {
     OrderResponse getOrderById(Long id);
     Page<OrderResponse> getOrdersByEmail(String email, Pageable pageable);
     OrderResponse updateOrderStatus(Long id, String status);
+    Page<OrderResponse> getAllOrders(Pageable pageable);
 }

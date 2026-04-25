@@ -31,6 +31,8 @@ public class ProductRequest {
     @Size(max = 500, message = "URL ảnh tối đa 500 ký tự")
     private String imageUrl;
 
+    private java.util.List<String> galleryImages;
+
     @NotNull(message = "Danh mục không được để trống")
     private Long categoryId;
 }

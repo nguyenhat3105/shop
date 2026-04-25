@@ -41,6 +41,7 @@ public class SecurityConfig {
                 // ── Product & Category: đọc public, ghi cần ADMIN ──
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                .requestMatchers(HttpMethod.POST,   "/api/products/*/reviews").authenticated()
                 .requestMatchers(HttpMethod.POST,   "/api/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")

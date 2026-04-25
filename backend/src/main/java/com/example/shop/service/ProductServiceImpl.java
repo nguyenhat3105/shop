@@ -9,6 +9,8 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * Toàn bộ business logic cho Product nằm ở đây.
  * Controller không xử lý logic — chỉ gọi Service và trả kết quả.
@@ -20,6 +22,9 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ReviewRepository reviewRepository;
+    private final UserRepository userRepository;
+    private final ProductImageRepository productImageRepository;
 
     // ---------------------------------------------------------------
     // GET ALL — có phân trang
@@ -43,7 +48,7 @@ public class ProductServiceImpl implements ProductService {
     // CREATE
     // ---------------------------------------------------------------
     @Override
-    @Transactional   // ghi dữ liệu — cần override readOnly = true ở class level
+    @Transactional
     public ProductResponse createProduct(ProductRequest request) {
         Category category = findCategoryOrThrow(request.getCategoryId());
 
@@ -57,6 +62,17 @@ public class ProductServiceImpl implements ProductService {
                 .build();
 
         Product saved = productRepository.save(product);
+
+        // Lưu gallery images
+        if (request.getGalleryImages() != null && !request.getGalleryImages().isEmpty()) {
+            for (String imgUrl : request.getGalleryImages()) {
+                productImageRepository.save(ProductImage.builder()
+                        .product(saved)
+                        .imageUrl(imgUrl)
+                        .build());
+            }
+        }
+
         return toResponse(saved);
     }
 
@@ -76,7 +92,22 @@ public class ProductServiceImpl implements ProductService {
         product.setImageUrl(request.getImageUrl());
         product.setCategory(category);
 
-        return toResponse(productRepository.save(product));
+        Product saved = productRepository.save(product);
+
+        // Cập nhật gallery images
+        if (request.getGalleryImages() != null) {
+            List<ProductImage> oldImages = productImageRepository.findByProductId(saved.getId());
+            productImageRepository.deleteAll(oldImages);
+
+            for (String imgUrl : request.getGalleryImages()) {
+                productImageRepository.save(ProductImage.builder()
+                        .product(saved)
+                        .imageUrl(imgUrl)
+                        .build());
+            }
+        }
+
+        return toResponse(saved);
     }
 
     // ---------------------------------------------------------------
@@ -98,12 +129,44 @@ public class ProductServiceImpl implements ProductService {
                 .map(this::toResponse);
     }
 
+    @Override
+    @Transactional
+    public ReviewResponse addReview(Long productId, String userEmail, ReviewRequest request) {
+        Product product = findProductOrThrow(productId);
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy user."));
+
+        Review review = Review.builder()
+                .product(product)
+                .user(user)
+                .rating(request.getRating())
+                .comment(request.getComment())
+                .build();
+        
+        Review saved = reviewRepository.save(review);
+        return toReviewResponse(saved);
+    }
+
+    @Override
+    public Page<ReviewResponse> getReviewsByProduct(Long productId, Pageable pageable) {
+        return reviewRepository.findByProductId(productId, pageable)
+                .map(this::toReviewResponse);
+    }
+
     // ---------------------------------------------------------------
     // PRIVATE HELPERS
     // ---------------------------------------------------------------
 
     /** Chuyển Entity → DTO Response (tránh trả Lazy object về Controller) */
     private ProductResponse toResponse(Product p) {
+        Double avgRating = reviewRepository.getAverageRatingByProductId(p.getId());
+        Long reviewCount = reviewRepository.countByProductId(p.getId());
+        
+        List<String> images = productImageRepository.findByProductId(p.getId())
+                .stream()
+                .map(ProductImage::getImageUrl)
+                .toList();
+
         return ProductResponse.builder()
                 .id(p.getId())
                 .name(p.getName())
@@ -113,6 +176,20 @@ public class ProductServiceImpl implements ProductService {
                 .imageUrl(p.getImageUrl())
                 .categoryId(p.getCategory().getId())
                 .categoryName(p.getCategory().getName())
+                .averageRating(avgRating != null ? avgRating : 0.0)
+                .reviewCount(reviewCount)
+                .galleryImages(images)
+                .build();
+    }
+
+    private ReviewResponse toReviewResponse(Review r) {
+        return ReviewResponse.builder()
+                .id(r.getId())
+                .userId(r.getUser().getId())
+                .userName(r.getUser().getFullName())
+                .rating(r.getRating())
+                .comment(r.getComment())
+                .createdAt(r.getCreatedAt())
                 .build();
     }
 

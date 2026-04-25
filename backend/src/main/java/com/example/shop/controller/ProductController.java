@@ -111,4 +111,27 @@ public class ProductController {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();  // HTTP 204 No Content
     }
+
+    // ---------------------------------------------------------------
+    // REVIEWS
+    // ---------------------------------------------------------------
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<ReviewResponse> addReview(
+            @PathVariable Long id,
+            @Valid @RequestBody ReviewRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails
+    ) {
+        ReviewResponse response = productService.addReview(id, userDetails.getUsername(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<Page<ReviewResponse>> getReviews(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(productService.getReviewsByProduct(id, pageable));
+    }
 }

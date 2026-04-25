@@ -71,6 +71,25 @@ public class OrderController {
     }
 
     // ---------------------------------------------------------------
+    // GET ALL (ADMIN ONLY) — GET /api/orders/all
+    // ---------------------------------------------------------------
+    @GetMapping("/all")
+    public ResponseEntity<Page<OrderResponse>> getAllOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction
+    ) {
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<OrderResponse> result = orderService.getAllOrders(pageable);
+        return ResponseEntity.ok(result);
+    }
+
+    // ---------------------------------------------------------------
     // UPDATE STATUS — PATCH /api/orders/{id}/status
     // ---------------------------------------------------------------
     @PatchMapping("/{id}/status")

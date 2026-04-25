@@ -151,6 +151,49 @@ public class EmailService {
         sendHtml(toEmail, "🔑 Mật khẩu tài khoản LuxeShop của bạn", html);
     }
 
+    @Async
+    public void sendPasswordResetEmail(String toEmail, String fullName, String token) {
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
+
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8"/>
+              <style>
+                body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f3ef; margin: 0; padding: 0; }
+                .wrapper { max-width: 560px; margin: 40px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+                .header { background: #1a1a1a; padding: 32px 40px; text-align: center; }
+                .header h1 { color: #b8955a; font-size: 28px; margin: 0; letter-spacing: 4px; font-weight: 300; }
+                .body { padding: 40px; }
+                .body h2 { color: #111; font-size: 22px; margin: 0 0 16px; font-weight: 500; }
+                .body p { color: #555; font-size: 15px; line-height: 1.7; margin: 0 0 20px; }
+                .btn { display: block; width: fit-content; margin: 28px auto; padding: 14px 40px; background: #1a1a1a; color: #fff !important; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; letter-spacing: 1px; }
+                .footer { background: #f5f3ef; padding: 20px 40px; text-align: center; font-size: 12px; color: #aaa; }
+                .note { font-size: 13px; color: #999; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
+              </style>
+            </head>
+            <body>
+              <div class="wrapper">
+                <div class="header"><h1>LUXE</h1></div>
+                <div class="body">
+                  <h2>Xin chào, %s!</h2>
+                  <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại <strong>LuxeShop</strong>. Nhấn vào nút dưới đây để thiết lập mật khẩu mới.</p>
+                  <a href="%s" class="btn">Đặt Lại Mật Khẩu</a>
+                  <div class="note">
+                    <p>Nếu bạn không yêu cầu đặt lại mật khẩu, xin vui lòng bỏ qua email này.<br/>
+                    Link này sẽ hết hạn sau <strong>15 phút</strong>.</p>
+                  </div>
+                </div>
+                <div class="footer">© 2025 LuxeShop. Bảo lưu mọi quyền.</div>
+              </div>
+            </body>
+            </html>
+            """.formatted(fullName, resetLink);
+
+        sendHtml(toEmail, "🔒 Đặt lại mật khẩu LuxeShop", html);
+    }
+
     private void sendHtml(String to, String subject, String htmlContent) {
         try {
             MimeMessage msg = mailSender.createMimeMessage();
