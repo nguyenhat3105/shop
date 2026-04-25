@@ -1,0 +1,198 @@
+/* ══════════════════════════════════════
+   HERO — CIU inspired: full bleed, minimal, bright
+══════════════════════════════════════ */
+
+.hero { background: var(--bg); }
+
+/* ── Main banner ── */
+.hero__banner {
+  position: relative;
+  width: 100%;
+  height: 88vh;
+  min-height: 500px;
+  overflow: hidden;
+}
+
+.hero__banner-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  transition: transform 8s ease;
+}
+.hero__banner:hover .hero__banner-img { transform: scale(1.03); }
+
+.hero__banner-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0,0,0,0.55) 0%,
+    rgba(0,0,0,0.20) 50%,
+    transparent 100%
+  );
+}
+
+/* Text block */
+.hero__banner-text {
+  position: absolute;
+  bottom: 10%;
+  left: 7%;
+  z-index: 2;
+  max-width: 480px;
+}
+
+.hero__banner-eyebrow {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 1rem;
+}
+
+.hero__banner-title {
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 400;
+  color: #fff;
+  line-height: 1.05;
+  margin-bottom: 2rem;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+}
+.hero__banner-title em { font-style: italic; font-weight: 300; }
+
+.hero__banner-cta {
+  background: #fff;
+  color: var(--text);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+.hero__banner-cta:hover {
+  background: var(--bg-2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+/* Side label */
+.hero__side-label {
+  position: absolute;
+  right: 2.5rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  transform-origin: center;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: rgba(255,255,255,0.45);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+/* ── Secondary banners ── */
+.hero__sub-banners {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+
+.hero__sub-banner {
+  position: relative;
+  overflow: hidden;
+  height: 320px;
+  cursor: pointer;
+}
+
+.hero__sub-banner img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s var(--ease);
+}
+.hero__sub-banner:hover img { transform: scale(1.05); }
+
+.hero__sub-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.55) 100%);
+}
+
+.hero__sub-text {
+  position: absolute;
+  bottom: 1.75rem; left: 1.75rem;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hero__sub-cat {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.hero__sub-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.8);
+  transition: gap var(--transition), color var(--transition);
+}
+.hero__sub-banner:hover .hero__sub-link { gap: 9px; color: #fff; }
+
+/* ── Trust bar ── */
+.hero__trust-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 3rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.trust-item svg { color: var(--accent); flex-shrink: 0; }
+
+.trust-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.trust-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.trust-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .hero__banner { height: 70vh; }
+  .hero__banner-text { bottom: 8%; left: 5%; }
+  .hero__banner-title { font-size: clamp(2.4rem, 8vw, 3.5rem); }
+  .hero__side-label { display: none; }
+  .hero__sub-banners { grid-template-columns: 1fr; }
+  .hero__sub-banner { height: 240px; }
+  .hero__trust-bar { flex-direction: column; gap: 1rem; align-items: flex-start; padding: 1.5rem 1.5rem; }
+  .trust-item { padding: 0; justify-content: flex-start; }
+  .trust-divider { width: 100%; height: 1px; }
+}
