@@ -45,6 +45,17 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    /** POST /api/auth/google */
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(
+            @RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(authService.loginWithGoogle(token));
+    }
+
     /** POST /api/auth/refresh */
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
@@ -72,5 +83,28 @@ public class AuthController {
                 .fullName(user.getFullName())
                 .role(user.getRole().name())
                 .build());
+    }
+
+    /** POST /api/auth/forgot-password */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email không được để trống."));
+        }
+        authService.forgotPassword(email);
+        return ResponseEntity.ok(Map.of("message", "Link khôi phục mật khẩu đã được gửi đến email của bạn."));
+    }
+
+    /** POST /api/auth/reset-password */
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+        if (token == null || newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Dữ liệu không hợp lệ. Mật khẩu phải có ít nhất 6 ký tự."));
+        }
+        authService.resetPassword(token, newPassword);
+        return ResponseEntity.ok(Map.of("message", "Đặt lại mật khẩu thành công."));
     }
 }

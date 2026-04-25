@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { login as apiLogin, logout as apiLogout, getMe } from '../services/api';
+import { login as apiLogin, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout, getMe } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -34,6 +34,15 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
+  const loginGoogle = useCallback(async (token) => {
+    const { data } = await apiLoginWithGoogle(token);
+    localStorage.setItem('accessToken',  data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setUser(data.user);
+    return data.user;
+  }, []);
+
   const logoutUser = useCallback(async () => {
     try { await apiLogout(); } catch {}
     clearAuth();
@@ -51,7 +60,7 @@ export function AuthProvider({ children }) {
   const isAdmin = user?.role === 'ADMIN';
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout: logoutUser, refreshUser, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, loginGoogle, logout: logoutUser, refreshUser, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

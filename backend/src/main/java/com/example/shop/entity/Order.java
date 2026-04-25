@@ -24,6 +24,12 @@ public class Order {
     @Column(name = "customer_email", nullable = false, length = 200)
     private String customerEmail;
 
+    @Column(name = "phone", nullable = false, length = 20)
+    private String phone;
+
+    @Column(name = "address", nullable = false, length = 500)
+    private String address;
+
     @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal totalAmount;
 

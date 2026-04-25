@@ -100,6 +100,14 @@ export default function Navbar() {
                     )}
                   </div>
                   <div className="nb__user-divider" />
+                  {isAdmin && (
+                    <Link to="/admin" className="nb__user-item" onClick={() => setUserMenu(false)} style={{ textDecoration: 'none', color: '#333' }}>
+                      <Shield size={14} /> Quản trị Hệ thống
+                    </Link>
+                  )}
+                  <Link to="/orders" className="nb__user-item" onClick={() => setUserMenu(false)} style={{ textDecoration: 'none', color: '#333' }}>
+                    <ShoppingBag size={14} /> Lịch sử mua hàng
+                  </Link>
                   <button className="nb__user-item nb__user-logout" onClick={handleLogout}>
                     <LogOut size={14} /> Đăng Xuất
                   </button>
@@ -135,9 +143,19 @@ export default function Navbar() {
             {cartCount > 0 && <span className="nb__badge-m">{cartCount}</span>}
           </button>
           {user ? (
-            <button className="nb__drawer-link nb__drawer-logout" onClick={handleLogout}>
-              <LogOut size={15} /> Đăng Xuất
-            </button>
+            <>
+              {isAdmin && (
+                <Link to="/admin" className="nb__drawer-link" onClick={() => setMenuOpen(false)}>
+                  <Shield size={15} /> Quản trị Hệ thống
+                </Link>
+              )}
+              <Link to="/orders" className="nb__drawer-link" onClick={() => setMenuOpen(false)}>
+                <ShoppingBag size={15} /> Lịch sử mua hàng
+              </Link>
+              <button className="nb__drawer-link nb__drawer-logout" onClick={handleLogout}>
+                <LogOut size={15} /> Đăng Xuất
+              </button>
+            </>
           ) : (
             <Link to="/login" className="nb__drawer-link">
               <User size={15} /> Đăng Nhập

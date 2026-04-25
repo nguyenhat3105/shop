@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Gem, Loader2, UserPlus, Check } from 'lucide-react';
 import { register as apiRegister } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 import './AuthPage.css';
 
 const rules = [
@@ -13,6 +15,7 @@ const rules = [
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { loginGoogle } = useAuth();
   const [form, setForm]     = useState({ fullName: '', email: '', password: '', confirm: '' });
   const [errors, setErrors] = useState({});
   const [showPw, setShowPw] = useState(false);
@@ -194,6 +197,26 @@ export default function RegisterPage() {
                 : <><UserPlus size={16} /> Tạo Tài Khoản</>
               }
             </button>
+
+            <div style={{ textAlign: 'center', margin: '20px 0', fontSize: '14px', color: '#666' }}>HOẶC</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+               <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    try {
+                      setLoading(true);
+                      await loginGoogle(credentialResponse.credential);
+                      navigate('/');
+                    } catch (err) {
+                      setServerErr("Đăng nhập Google thất bại.");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  onError={() => {
+                    setServerErr("Đăng nhập Google thất bại.");
+                  }}
+               />
+            </div>
 
             <p className="auth-terms">
               Bằng cách đăng ký, bạn đồng ý với{' '}

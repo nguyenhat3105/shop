@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Gem, Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 import './AuthPage.css';
 
 export default function LoginPage() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { login } = useAuth();
+  const { login, loginGoogle } = useAuth();
   const from      = location.state?.from?.pathname || '/';
 
   const [form, setForm]     = useState({ email: '', password: '' });
@@ -135,8 +136,28 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <div style={{ textAlign: 'center', margin: '20px 0', fontSize: '14px', color: '#666' }}>HOẶC</div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+             <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  try {
+                    setLoading(true);
+                    await loginGoogle(credentialResponse.credential);
+                    navigate(from, { replace: true });
+                  } catch (err) {
+                    setServerErr("Đăng nhập Google thất bại.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                onError={() => {
+                  setServerErr("Đăng nhập Google thất bại.");
+                }}
+             />
+          </div>
+
           {/* Admin hint */}
-          <div className="auth-demo-hint">
+          <div className="auth-demo-hint" style={{ marginTop: '30px' }}>
             <span className="demo-label">Tài khoản demo</span>
             <code>admin@luxeshop.vn / Admin@12345</code>
           </div>

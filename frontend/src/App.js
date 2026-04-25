@@ -12,10 +12,17 @@ import ProductDetail     from './pages/ProductDetail';
 import CartPage          from './pages/CartPage';
 import CategoriesPage    from './pages/CategoriesPage';
 import CategoryDetailPage from './pages/CategoryDetailPage';
+import OrderHistoryPage  from './pages/OrderHistoryPage';
 import AboutPage         from './pages/AboutPage';
 import LoginPage         from './pages/LoginPage';
 import RegisterPage      from './pages/RegisterPage';
 import VerifyEmailPage   from './pages/VerifyEmailPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VNPayReturnPage   from './pages/VNPayReturnPage';
+import AdminLayout       from './pages/admin/AdminLayout';
+import AdminOrders       from './pages/admin/AdminOrders';
+import AdminProducts     from './pages/admin/AdminProducts';
 import './index.css';
 
 export default function App() {
@@ -34,6 +41,23 @@ export default function App() {
             <Route path="/login"          element={<LoginPage />} />
             <Route path="/register"       element={<RegisterPage />} />
             <Route path="/verify-email"   element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/vnpay-return"   element={<VNPayReturnPage />} />
+            <Route 
+              path="/orders" 
+              element={
+                <ProtectedRoute>
+                  <OrderHistoryPage />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<div style={{padding:'20px'}}>Chào mừng đến với Bảng điều khiển Admin</div>} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="products" element={<AdminProducts />} />
+            </Route>
           </Routes>
           <Footer />
           <CartModal />
