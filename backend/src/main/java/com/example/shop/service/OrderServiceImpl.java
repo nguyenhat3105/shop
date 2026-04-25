@@ -30,6 +30,8 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final OrderItemRepository orderItemRepository;
     private final com.example.shop.repository.CouponRepository couponRepository;
+    private final EmailService emailService;
+    private final com.example.shop.repository.ProductVariantRepository variantRepository;
 
     @Override
     @Transactional
@@ -40,6 +42,8 @@ public class OrderServiceImpl implements OrderService {
                 .phone(request.getPhone())
                 .address(request.getAddress())
                 .status(Order.OrderStatus.PENDING)
+                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD")
+                .couponCode(request.getCouponCode())
                 .build();
 
         BigDecimal calculatedTotal = BigDecimal.ZERO;
@@ -50,17 +54,36 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm", itemReq.getProductId()));
             
             // Xử lý tồn kho
-            if (product.getStock() < itemReq.getQuantity()) {
-                throw new IllegalArgumentException("Sản phẩm '" + product.getName() + "' không đủ số lượng tồn kho (Còn: " + product.getStock() + ").");
+            String size = null;
+            String color = null;
+
+            if (itemReq.getProductVariantId() != null) {
+                com.example.shop.entity.ProductVariant variant = variantRepository.findById(itemReq.getProductVariantId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Biến thể sản phẩm", itemReq.getProductVariantId()));
+                
+                if (variant.getStock() < itemReq.getQuantity()) {
+                    throw new IllegalArgumentException("Biến thể '" + product.getName() + " - " + variant.getSize() + "/" + variant.getColor() + "' không đủ tồn kho (Còn: " + variant.getStock() + ").");
+                }
+                variant.setStock(variant.getStock() - itemReq.getQuantity());
+                variantRepository.save(variant);
+                
+                size = variant.getSize();
+                color = variant.getColor();
+            } else {
+                if (product.getStock() < itemReq.getQuantity()) {
+                    throw new IllegalArgumentException("Sản phẩm '" + product.getName() + "' không đủ số lượng tồn kho (Còn: " + product.getStock() + ").");
+                }
+                product.setStock(product.getStock() - itemReq.getQuantity());
+                productRepository.save(product);
             }
-            product.setStock(product.getStock() - itemReq.getQuantity());
-            productRepository.save(product);
 
             OrderItem item = OrderItem.builder()
                     .order(order)
                     .product(product)
                     .quantity(itemReq.getQuantity())
                     .unitPrice(product.getPrice()) // Use DB price for security
+                    .size(size)
+                    .color(color)
                     .build();
             
             calculatedTotal = calculatedTotal.add(product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
@@ -89,6 +112,12 @@ public class OrderServiceImpl implements OrderService {
         order.setItems(items); // CascadeType.ALL will save items
 
         Order savedOrder = orderRepository.save(order);
+        
+        // Gửi email nếu là COD (VNPay sẽ gửi email trong callback webhook)
+        if ("COD".equalsIgnoreCase(savedOrder.getPaymentMethod())) {
+            emailService.sendOrderConfirmationEmail(savedOrder);
+        }
+
         return mapToResponse(savedOrder);
     }
 
@@ -116,6 +145,7 @@ public class OrderServiceImpl implements OrderService {
         // Hoàn lại stock nếu đơn bị huỷ (và trước đó chưa bị huỷ)
         if (newStatus == Order.OrderStatus.CANCELLED && order.getStatus() != Order.OrderStatus.CANCELLED) {
             for (OrderItem item : order.getItems()) {
+                // Tạm thời cộng lại vào Product chung, nếu cần chi tiết hơn phải lưu VariantId trong OrderItem
                 Product p = item.getProduct();
                 p.setStock(p.getStock() + item.getQuantity());
                 productRepository.save(p);
@@ -142,6 +172,8 @@ public class OrderServiceImpl implements OrderService {
                         .productImageUrl(item.getProduct().getImageUrl())
                         .quantity(item.getQuantity())
                         .unitPrice(item.getUnitPrice())
+                        .size(item.getSize())
+                        .color(item.getColor())
                         .build())
                 .collect(Collectors.toList());
 

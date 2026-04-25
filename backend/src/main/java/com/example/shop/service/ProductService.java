@@ -33,4 +33,7 @@ public interface ProductService {
 
     /** Lấy danh sách review của 1 product */
     Page<ReviewResponse> getReviewsByProduct(Long productId, Pageable pageable);
+
+    /** Lấy danh sách sản phẩm liên quan */
+    java.util.List<ProductResponse> getRelatedProducts(Long categoryId, Long productId);
 }

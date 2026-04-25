@@ -59,6 +59,9 @@ export const getProductById = (id) => api.get(`/products/${id}`);
 export const searchProducts = (keyword, page = 0, size = 12) =>
   api.get('/products/search', { params: { keyword, page, size } });
 
+export const getRelatedProducts = (categoryId, excludeId) => 
+  api.get(`/products/category/${categoryId}/related`, { params: { excludeId } });
+
 export const getReviews = (id, page = 0, size = 10) => api.get(`/products/${id}/reviews`, { params: { page, size } });
 export const addReview  = (id, data) => api.post(`/products/${id}/reviews`, data);
 
@@ -82,5 +85,8 @@ export const updateOrderStatus = (id, status) => api.patch(`/orders/${id}/status
 
 // ── PAYMENT ──────────────────────────────────────────────────
 export const createPaymentUrl = (orderId) => api.get('/payment/create-url', { params: { orderId } });
+
+// ── ADMIN ────────────────────────────────────────────────────
+export const getAnalytics = () => api.get('/admin/analytics');
 
 export default api;

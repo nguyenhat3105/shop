@@ -154,6 +154,17 @@ public class ProductServiceImpl implements ProductService {
     }
 
     // ---------------------------------------------------------------
+    // RELATED PRODUCTS
+    // ---------------------------------------------------------------
+    @Override
+    public List<ProductResponse> getRelatedProducts(Long categoryId, Long productId) {
+        return productRepository.findTop4ByCategoryIdAndIdNot(categoryId, productId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // ---------------------------------------------------------------
     // PRIVATE HELPERS
     // ---------------------------------------------------------------
 
@@ -167,6 +178,16 @@ public class ProductServiceImpl implements ProductService {
                 .map(ProductImage::getImageUrl)
                 .toList();
 
+        List<ProductVariantDto> variantDtos = p.getVariants() != null ? 
+                p.getVariants().stream()
+                 .map(v -> ProductVariantDto.builder()
+                        .id(v.getId())
+                        .size(v.getSize())
+                        .color(v.getColor())
+                        .stock(v.getStock())
+                        .build())
+                 .toList() : new java.util.ArrayList<>();
+
         return ProductResponse.builder()
                 .id(p.getId())
                 .name(p.getName())
@@ -179,6 +200,7 @@ public class ProductServiceImpl implements ProductService {
                 .averageRating(avgRating != null ? avgRating : 0.0)
                 .reviewCount(reviewCount)
                 .galleryImages(images)
+                .variants(variantDtos)
                 .build();
     }
 

@@ -45,6 +45,12 @@ public class Order {
     @EqualsAndHashCode.Exclude
     private List<OrderItem> items;
 
+    @Column(name = "payment_method", length = 50)
+    private String paymentMethod;
+
+    @Column(name = "coupon_code", length = 50)
+    private String couponCode;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

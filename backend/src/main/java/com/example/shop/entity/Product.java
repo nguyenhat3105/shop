@@ -36,4 +36,9 @@ public class Product {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Category category;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private java.util.List<ProductVariant> variants;
 }

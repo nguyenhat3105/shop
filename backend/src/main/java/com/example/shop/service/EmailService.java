@@ -9,6 +9,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import com.example.shop.entity.Order;
+import com.example.shop.entity.OrderItem;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -192,6 +196,88 @@ public class EmailService {
             """.formatted(fullName, resetLink);
 
         sendHtml(toEmail, "🔒 Đặt lại mật khẩu LuxeShop", html);
+    }
+
+    @Async
+    public void sendOrderConfirmationEmail(Order order) {
+        NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+        StringBuilder itemsHtml = new StringBuilder();
+        
+        for (OrderItem item : order.getItems()) {
+            itemsHtml.append("<tr>")
+                     .append("<td style='padding: 10px 0; border-bottom: 1px solid #eee;'>")
+                     .append("<strong>").append(item.getProduct().getName()).append("</strong><br/>")
+                     .append("<span style='color: #666; font-size: 12px;'>Số lượng: ").append(item.getQuantity()).append("</span>")
+                     .append("</td>")
+                     .append("<td style='padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;'>")
+                     .append(formatter.format(item.getUnitPrice()))
+                     .append("</td>")
+                     .append("</tr>");
+        }
+
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8"/>
+              <style>
+                body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f3ef; margin: 0; padding: 0; }
+                .wrapper { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+                .header { background: #1a1a1a; padding: 32px 40px; text-align: center; }
+                .header h1 { color: #b8955a; font-size: 28px; margin: 0; letter-spacing: 4px; font-weight: 300; }
+                .body { padding: 40px; }
+                .body h2 { color: #111; font-size: 20px; margin: 0 0 16px; font-weight: 500; }
+                .body p { color: #555; font-size: 15px; line-height: 1.7; margin: 0 0 10px; }
+                .table-wrap { margin-top: 30px; }
+                .table-wrap h3 { border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; font-size: 16px; }
+                table { width: 100%%; border-collapse: collapse; }
+                .total-wrap { margin-top: 20px; text-align: right; }
+                .total-wrap h3 { font-size: 20px; color: #b8955a; margin: 10px 0; }
+                .info-wrap { margin-top: 30px; }
+                .info-wrap h3 { border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; font-size: 16px; }
+                .footer { background: #f5f3ef; padding: 20px 40px; text-align: center; font-size: 12px; color: #aaa; }
+              </style>
+            </head>
+            <body>
+              <div class="wrapper">
+                <div class="header"><h1>LUXE</h1></div>
+                <div class="body">
+                  <h2>Cảm ơn bạn đã đặt hàng, %s!</h2>
+                  <p>Đơn hàng <strong>#%s</strong> của bạn đã được xác nhận. Chúng tôi sẽ chuẩn bị hàng và giao cho bạn trong thời gian sớm nhất.</p>
+                  
+                  <div class="table-wrap">
+                    <h3>Chi tiết đơn hàng</h3>
+                    <table>%s</table>
+                  </div>
+
+                  <div class="total-wrap">
+                    %s
+                    <h3>Tổng tiền: %s</h3>
+                    <p style='color: #666; margin: 5px 0; font-size: 14px;'>Phương thức: <strong>%s</strong></p>
+                  </div>
+
+                  <div class="info-wrap">
+                    <h3>Thông tin giao hàng</h3>
+                    <p><strong>SĐT:</strong> %s</p>
+                    <p><strong>Địa chỉ:</strong> %s</p>
+                  </div>
+                </div>
+                <div class="footer">© 2025 LuxeShop. Bảo lưu mọi quyền.</div>
+              </div>
+            </body>
+            </html>
+            """.formatted(
+                order.getCustomerName(),
+                order.getId(),
+                itemsHtml.toString(),
+                order.getCouponCode() != null ? "<p style='color: #52c41a; margin: 5px 0; font-size: 14px;'>Mã giảm giá: <strong>" + order.getCouponCode() + "</strong></p>" : "",
+                formatter.format(order.getTotalAmount()),
+                order.getPaymentMethod(),
+                order.getPhone(),
+                order.getAddress()
+            );
+
+        sendHtml(order.getCustomerEmail(), "🛍 Xác nhận Đơn hàng #" + order.getId() + " - LuxeShop", html);
     }
 
     private void sendHtml(String to, String subject, String htmlContent) {

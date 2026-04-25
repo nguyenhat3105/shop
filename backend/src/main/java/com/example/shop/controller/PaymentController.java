@@ -21,6 +21,7 @@ import java.util.*;
 public class PaymentController {
 
     private final OrderRepository orderRepository;
+    private final com.example.shop.service.EmailService emailService;
 
     @Value("${vnpay.tmnCode}")
     private String vnp_TmnCode;
@@ -135,10 +136,10 @@ public class PaymentController {
                         // Hoặc ta đổi status thành PROCESSING
                         // Chúng ta sẽ set PENDING = false, và status là gì đó
                         if (order.getStatus() == Order.OrderStatus.PENDING) {
-                            // Tuỳ theo thiết kế, ta có thể tạo thêm state PAID
-                            // Ở đây ta cứ đánh dấu PENDING, admin sẽ duyệt
-                            // Nhưng có thể lưu mã giao dịch
+                            // Cập nhật trạng thái nếu cần
                         }
+                        // Send confirmation email for VNPay order
+                        emailService.sendOrderConfirmationEmail(order);
                     }
                     return ResponseEntity.ok("Success");
                 } catch (Exception e) {
