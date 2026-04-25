@@ -1,0 +1,187 @@
+.pd-page {
+  min-height: 100vh;
+  padding: var(--nav-h) 2rem 4rem;
+}
+
+.pd-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-top: 2.5rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-bottom: 2rem;
+  transition: color var(--transition);
+}
+.back-link:hover { color: var(--text); }
+
+/* ── Layout ── */
+.pd-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+/* ── Image ── */
+.pd-img-wrap {
+  position: sticky;
+  top: calc(var(--nav-h) + 1.5rem);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  aspect-ratio: 4/5;
+}
+
+.pd-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s var(--ease);
+}
+
+.pd-img-wrap:hover .pd-img { transform: scale(1.04); }
+
+/* ── Info ── */
+.pd-info { display: flex; flex-direction: column; gap: 1rem; }
+
+.pd-category {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.pd-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.pd-rating {
+  display: flex; align-items: center; gap: 4px;
+}
+.pd-rating span { font-size: 0.75rem; color: var(--text-muted); margin-left: 4px; }
+.star-on  { color: #d4a843; }
+.star-off { color: var(--border-2); }
+
+.pd-price {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pd-divider { height: 1px; background: var(--border); }
+
+.pd-desc {
+  font-size: 0.88rem;
+  color: var(--text-2);
+  line-height: 1.8;
+}
+
+.pd-stock {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Qty */
+.pd-qty-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pd-qty-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  min-width: 50px;
+}
+
+.pd-qty {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.pd-qty__btn {
+  width: 36px; height: 36px;
+  background: var(--bg-2);
+  color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition);
+}
+.pd-qty__btn:hover:not(:disabled) { background: var(--bg-3); }
+.pd-qty__btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.pd-qty__val {
+  min-width: 40px; text-align: center;
+  font-size: 0.9rem; font-weight: 600; color: var(--text);
+}
+
+/* Add button */
+.pd-add-btn {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  background: var(--text);
+  color: #fff;
+  border: none; border-radius: var(--radius);
+  font-size: 0.82rem; font-weight: 600; font-family: inherit;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+}
+.pd-add-btn:hover:not(:disabled) {
+  background: var(--brand-2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.pd-add-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.pd-add-btn.added { background: var(--success); }
+
+/* View cart CTA */
+.pd-view-cart {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0.7rem 1.25rem;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.8rem; font-weight: 600; color: var(--text);
+  transition: all var(--transition);
+  animation: fadeUp 0.35s var(--ease-spring) both;
+}
+.pd-view-cart:hover { border-color: var(--border-2); background: var(--bg-2); }
+
+/* Perks */
+.pd-perks {
+  display: flex; flex-direction: column; gap: 0.55rem;
+  padding: 1rem; background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  margin-top: 0.5rem;
+}
+
+.pd-perk {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.8rem; color: var(--text-2);
+}
+.pd-perk svg { color: var(--accent); flex-shrink: 0; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .pd-layout { grid-template-columns: 1fr; gap: 2rem; }
+  .pd-img-wrap { position: relative; top: 0; aspect-ratio: 1; }
+}
+
+@media (max-width: 600px) {
+  .pd-page { padding: var(--nav-h) 1rem 3rem; }
+}
