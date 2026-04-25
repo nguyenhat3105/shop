@@ -24,4 +24,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // Tìm đơn hàng theo email và trạng thái
     List<Order> findByCustomerEmailAndStatus(String email, OrderStatus status);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o")
+    java.math.BigDecimal sumTotalRevenue();
+
+    @org.springframework.data.jpa.repository.Query("SELECT " +
+            "NEW map(FUNCTION('MONTH', o.createdAt) as month, SUM(o.totalAmount) as revenue) " +
+            "FROM Order o " +
+            "WHERE FUNCTION('YEAR', o.createdAt) = FUNCTION('YEAR', CURRENT_DATE) " +
+            "GROUP BY FUNCTION('MONTH', o.createdAt) " +
+            "ORDER BY FUNCTION('MONTH', o.createdAt)")
+    List<java.util.Map<String, Object>> getMonthlyRevenue();
 }

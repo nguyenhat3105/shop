@@ -54,29 +54,30 @@ export function CartProvider({ children }) {
 
   /* ── Cart actions ── */
   const addToCart = useCallback((product) => {
+    const cartItemId = `${product.id}-${product.selectedSize || ''}-${product.selectedColor || ''}`;
     setCart(prev => {
-      const existing = prev.find(i => i.id === product.id);
+      const existing = prev.find(i => i.cartItemId === cartItemId);
       if (existing) {
         return prev.map(i =>
-          i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.cartItemId === cartItemId ? { ...i, quantity: i.quantity + (product._addQty || 1) } : i
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, cartItemId, quantity: product._addQty || 1 }];
     });
     addToast(`Đã thêm "${product.name}" vào giỏ!`, 'success', product);
   }, [addToast]);
 
-  const removeFromCart = useCallback((id) => {
+  const removeFromCart = useCallback((cartItemId) => {
     setCart(prev => {
-      const item = prev.find(i => i.id === id);
+      const item = prev.find(i => i.cartItemId === cartItemId);
       if (item) addToast(`Đã xoá "${item.name}" khỏi giỏ.`, 'info');
-      return prev.filter(i => i.id !== id);
+      return prev.filter(i => i.cartItemId !== cartItemId);
     });
   }, [addToast]);
 
-  const updateQty = useCallback((id, qty) => {
-    if (qty <= 0) { removeFromCart(id); return; }
-    setCart(prev => prev.map(i => i.id === id ? { ...i, quantity: qty } : i));
+  const updateQty = useCallback((cartItemId, qty) => {
+    if (qty <= 0) { removeFromCart(cartItemId); return; }
+    setCart(prev => prev.map(i => i.cartItemId === cartItemId ? { ...i, quantity: qty } : i));
   }, [removeFromCart]);
 
   const clearCart = useCallback(() => {

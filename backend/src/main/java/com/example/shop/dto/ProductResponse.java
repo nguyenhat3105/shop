@@ -29,4 +29,7 @@ public class ProductResponse {
 
     // Hình ảnh phụ
     private java.util.List<String> galleryImages;
+
+    // Biến thể
+    private java.util.List<ProductVariantDto> variants;
 }

@@ -18,4 +18,6 @@ public class OrderItemRequest {
 
     @NotNull(message = "Đơn giá không được để trống")
     private BigDecimal unitPrice;
+
+    private Long productVariantId;
 }

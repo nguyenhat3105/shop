@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft, Star, Truck, Shield, RotateCcw, Loader2, Eye } from 'lucide-react';
-import { getProductById, getReviews, addReview } from '../services/api';
+import { getProductById, getReviews, addReview, getRelatedProducts } from '../services/api';
 import { useCart } from '../context/CartContext';
 import './ProductDetail.css';
 
@@ -16,12 +16,17 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [qty, setQty]         = useState(1);
   const [added, setAdded]     = useState(false);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
 
   // Reviews state
   const [reviews, setReviews] = useState([]);
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(5);
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Related products state
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   const [activeImage, setActiveImage] = useState('');
 
@@ -33,9 +38,24 @@ export default function ProductDetail() {
       getReviews(id, 0, 10)
     ])
       .then(([prodRes, revRes]) => {
-        setProduct(prodRes.data);
-        setActiveImage(prodRes.data.imageUrl);
+        const prod = prodRes.data;
+        setProduct(prod);
+        setActiveImage(prod.imageUrl);
         setReviews(revRes.data.content);
+        
+        // Mặc định chọn size và color đầu tiên
+        if (prod.variants && prod.variants.length > 0) {
+          const defaultVariant = prod.variants[0];
+          if (defaultVariant.size) setSelectedSize(defaultVariant.size);
+          if (defaultVariant.color) setSelectedColor(defaultVariant.color);
+        }
+        
+        // Fetch related products
+        if (prodRes.data.categoryId) {
+          getRelatedProducts(prodRes.data.categoryId, prodRes.data.id)
+            .then(relRes => setRelatedProducts(relRes.data))
+            .catch(() => {});
+        }
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
@@ -57,10 +77,27 @@ export default function ProductDetail() {
     }
   };
 
+  // Tìm variant đang được chọn để lấy stock chính xác
+  const currentVariant = product?.variants?.find(
+    v => (v.size === selectedSize || (!v.size && !selectedSize)) && 
+         (v.color === selectedColor || (!v.color && !selectedColor))
+  );
+
+  const availableStock = currentVariant ? currentVariant.stock : (product?.stock || 0);
+
   const handleAdd = () => {
     if (!product) return;
-    addToCart({ ...product, _addQty: qty });
-    for (let i = 1; i < qty; i++) addToCart(product);
+    
+    // Tạo product copy với thông tin variant
+    const cartProduct = {
+      ...product,
+      selectedVariantId: currentVariant?.id,
+      selectedSize,
+      selectedColor
+    };
+
+    addToCart({ ...cartProduct, _addQty: qty });
+    
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
@@ -137,21 +174,62 @@ export default function ProductDetail() {
               {product.description || 'Sản phẩm chất lượng cao cấp, được tuyển chọn kỹ lưỡng.'}
             </p>
 
-            <div className={`pd-stock ${product.stock === 0 ? 'out' : ''}`}>
-              {product.stock > 0 ? `✓ Còn hàng (${product.stock} sản phẩm)` : '✗ Hết hàng'}
+            <div className={`pd-stock ${availableStock === 0 ? 'out' : ''}`}>
+              {availableStock > 0 ? `✓ Còn hàng (${availableStock} sản phẩm)` : '✗ Hết hàng'}
             </div>
 
+            {/* Variants Selector */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="pd-variants">
+                {/* Size Selector */}
+                {Array.from(new Set(product.variants.map(v => v.size).filter(Boolean))).length > 0 && (
+                  <div className="variant-group">
+                    <h4>Kích cỡ:</h4>
+                    <div className="variant-options">
+                      {Array.from(new Set(product.variants.map(v => v.size).filter(Boolean))).map(s => (
+                        <button 
+                          key={s} 
+                          className={`variant-btn ${selectedSize === s ? 'active' : ''}`}
+                          onClick={() => { setSelectedSize(s); setQty(1); }}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Color Selector */}
+                {Array.from(new Set(product.variants.map(v => v.color).filter(Boolean))).length > 0 && (
+                  <div className="variant-group" style={{ marginTop: '15px' }}>
+                    <h4>Màu sắc:</h4>
+                    <div className="variant-options">
+                      {Array.from(new Set(product.variants.map(v => v.color).filter(Boolean))).map(c => (
+                        <button 
+                          key={c} 
+                          className={`variant-btn ${selectedColor === c ? 'active' : ''}`}
+                          onClick={() => { setSelectedColor(c); setQty(1); }}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Qty + Actions */}
-            <div className="pd-actions">
+            <div className="pd-actions" style={{ marginTop: '20px' }}>
               <div className="qty-wrap">
                 <button onClick={() => setQty(v => Math.max(1, v - 1))}>−</button>
                 <span>{qty}</span>
-                <button onClick={() => setQty(v => Math.min(product.stock || 99, v + 1))}>+</button>
+                <button onClick={() => setQty(v => Math.min(availableStock || 99, v + 1))}>+</button>
               </div>
               <button
                 className={`pd-add-btn ${added ? 'added' : ''}`}
                 onClick={handleAdd}
-                disabled={product.stock === 0}
+                disabled={availableStock === 0}
               >
                 <ShoppingBag size={18} />
                 {added ? '✓ Đã thêm vào giỏ!' : 'Thêm vào giỏ hàng'}
@@ -172,6 +250,24 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
+
+        {/* Related Products Section */}
+        {relatedProducts.length > 0 && (
+          <div className="pd-related-section" style={{ marginTop: '60px', borderTop: '1px solid #eee', paddingTop: '40px' }}>
+            <h2 style={{ fontSize: '24px', marginBottom: '30px', fontFamily: 'var(--font-serif)', textAlign: 'center' }}>Sản phẩm Tương tự</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '30px' }}>
+              {relatedProducts.map(rp => (
+                <Link to={`/products/${rp.id}`} key={rp.id} style={{ textDecoration: 'none', color: 'inherit', display: 'block', transition: 'transform 0.3s' }} className="related-card">
+                  <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '8px', marginBottom: '15px' }}>
+                    <img src={rp.imageUrl || `https://picsum.photos/seed/${rp.id}/400/400`} alt={rp.name} style={{ width: '100%', height: '280px', objectFit: 'cover' }} />
+                  </div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rp.name}</h3>
+                  <p style={{ color: 'var(--gold)', fontWeight: 'bold' }}>{formatVND(rp.price)}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Reviews Section */}
         <div className="pd-reviews-section" style={{ marginTop: '60px', borderTop: '1px solid #eee', paddingTop: '40px' }}>

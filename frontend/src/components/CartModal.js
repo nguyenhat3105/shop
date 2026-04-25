@@ -101,6 +101,7 @@ export default function CartModal() {
           productId: i.id,
           quantity:  i.quantity,
           unitPrice: i.price,
+          productVariantId: i.selectedVariantId
         })),
       });
       const orderId = res?.data?.id;
@@ -177,7 +178,7 @@ export default function CartModal() {
               ) : (
                 <ul className="cm-list">
                   {cart.map(item => (
-                    <li key={item.id} className="cm-item">
+                    <li key={item.cartItemId} className="cm-item">
                       <img
                         src={item.imageUrl || `https://picsum.photos/seed/${item.id}/80/80`}
                         alt={item.name}
@@ -188,24 +189,31 @@ export default function CartModal() {
                         {item.categoryName && (
                           <p className="cm-item__cat">{item.categoryName}</p>
                         )}
+                        {(item.selectedSize || item.selectedColor) && (
+                          <p className="cm-item__variant" style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                            {item.selectedSize && `Size: ${item.selectedSize}`}
+                            {item.selectedSize && item.selectedColor && ' | '}
+                            {item.selectedColor && `Màu: ${item.selectedColor}`}
+                          </p>
+                        )}
                         <p className="cm-item__price">{formatVND(item.price)}</p>
                       </div>
                       <div className="cm-item__right">
                         <div className="cm-qty">
                           <button
                             className="cm-qty__btn"
-                            onClick={() => updateQty(item.id, item.quantity - 1)}
+                            onClick={() => updateQty(item.cartItemId, item.quantity - 1)}
                           ><Minus size={12} /></button>
                           <span className="cm-qty__val">{item.quantity}</span>
                           <button
                             className="cm-qty__btn"
-                            onClick={() => updateQty(item.id, item.quantity + 1)}
+                            onClick={() => updateQty(item.cartItemId, item.quantity + 1)}
                           ><Plus size={12} /></button>
                         </div>
                         <p className="cm-item__total">{formatVND(item.price * item.quantity)}</p>
                         <button
                           className="cm-item__del"
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item.cartItemId)}
                           title="Xoá"
                         ><Trash2 size={13} /></button>
                       </div>
@@ -256,11 +264,20 @@ export default function CartModal() {
                   <p className="co-label">Đơn hàng ({cartCount} sản phẩm)</p>
                   <div className="co-items-mini">
                     {cart.map(i => (
-                      <div key={i.id} className="co-mini-item">
+                      <div key={i.cartItemId} className="co-mini-item" style={{ alignItems: 'flex-start' }}>
                         <img src={i.imageUrl || `https://picsum.photos/seed/${i.id}/40/40`} alt={i.name} />
-                        <span>{i.name}</span>
-                        <span className="co-mini-qty">×{i.quantity}</span>
-                        <span className="co-mini-price">{formatVND(i.price * i.quantity)}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingRight: '10px' }}>
+                          <span>{i.name}</span>
+                          {(i.selectedSize || i.selectedColor) && (
+                            <span style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                              {i.selectedSize && `Size: ${i.selectedSize}`}
+                              {i.selectedSize && i.selectedColor && ' | '}
+                              {i.selectedColor && `Màu: ${i.selectedColor}`}
+                            </span>
+                          )}
+                        </div>
+                        <span className="co-mini-qty" style={{ marginTop: '2px' }}>×{i.quantity}</span>
+                        <span className="co-mini-price" style={{ marginTop: '2px' }}>{formatVND(i.price * i.quantity)}</span>
                       </div>
                     ))}
                   </div>

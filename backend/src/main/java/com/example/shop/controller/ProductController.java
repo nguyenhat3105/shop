@@ -134,4 +134,15 @@ public class ProductController {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return ResponseEntity.ok(productService.getReviewsByProduct(id, pageable));
     }
+
+    // ---------------------------------------------------------------
+    // RELATED PRODUCTS
+    // ---------------------------------------------------------------
+    @GetMapping("/category/{categoryId}/related")
+    public ResponseEntity<java.util.List<ProductResponse>> getRelatedProducts(
+            @PathVariable Long categoryId,
+            @RequestParam Long excludeId
+    ) {
+        return ResponseEntity.ok(productService.getRelatedProducts(categoryId, excludeId));
+    }
 }

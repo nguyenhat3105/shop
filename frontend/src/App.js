@@ -23,6 +23,7 @@ import VNPayReturnPage   from './pages/VNPayReturnPage';
 import AdminLayout       from './pages/admin/AdminLayout';
 import AdminOrders       from './pages/admin/AdminOrders';
 import AdminProducts     from './pages/admin/AdminProducts';
+import AdminDashboard    from './pages/admin/AdminDashboard';
 import './index.css';
 
 export default function App() {
@@ -54,7 +55,7 @@ export default function App() {
             />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<div style={{padding:'20px'}}>Chào mừng đến với Bảng điều khiển Admin</div>} />
+              <Route index element={<AdminDashboard />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="products" element={<AdminProducts />} />
             </Route>

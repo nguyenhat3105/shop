@@ -34,4 +34,10 @@ public class OrderItem {
     // Lưu giá tại thời điểm đặt hàng, tránh ảnh hưởng khi giá sản phẩm thay đổi
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice;
+
+    @Column(length = 50)
+    private String size;
+
+    @Column(length = 50)
+    private String color;
 }
