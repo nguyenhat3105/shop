@@ -36,4 +36,13 @@ public interface ProductService {
 
     /** Lấy danh sách sản phẩm liên quan */
     java.util.List<ProductResponse> getRelatedProducts(Long categoryId, Long productId);
+
+    /** Thêm biến thể mới cho sản phẩm */
+    ProductVariantDto addVariant(Long productId, ProductVariantDto request);
+
+    /** Xoá biến thể */
+    void deleteVariant(Long productId, Long variantId);
+
+    /** Lấy danh sách biến thể của sản phẩm */
+    java.util.List<ProductVariantDto> getVariantsByProduct(Long productId);
 }

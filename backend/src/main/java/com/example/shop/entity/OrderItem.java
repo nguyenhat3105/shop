@@ -40,4 +40,7 @@ public class OrderItem {
 
     @Column(length = 50)
     private String color;
+
+    @Column(name = "product_variant_id")
+    private Long productVariantId;
 }

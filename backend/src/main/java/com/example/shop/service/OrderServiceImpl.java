@@ -84,6 +84,7 @@ public class OrderServiceImpl implements OrderService {
                     .unitPrice(product.getPrice()) // Use DB price for security
                     .size(size)
                     .color(color)
+                    .productVariantId(itemReq.getProductVariantId())
                     .build();
             
             calculatedTotal = calculatedTotal.add(product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
@@ -145,10 +146,16 @@ public class OrderServiceImpl implements OrderService {
         // Hoàn lại stock nếu đơn bị huỷ (và trước đó chưa bị huỷ)
         if (newStatus == Order.OrderStatus.CANCELLED && order.getStatus() != Order.OrderStatus.CANCELLED) {
             for (OrderItem item : order.getItems()) {
-                // Tạm thời cộng lại vào Product chung, nếu cần chi tiết hơn phải lưu VariantId trong OrderItem
-                Product p = item.getProduct();
-                p.setStock(p.getStock() + item.getQuantity());
-                productRepository.save(p);
+                if (item.getProductVariantId() != null) {
+                    variantRepository.findById(item.getProductVariantId()).ifPresent(v -> {
+                        v.setStock(v.getStock() + item.getQuantity());
+                        variantRepository.save(v);
+                    });
+                } else {
+                    Product p = item.getProduct();
+                    p.setStock(p.getStock() + item.getQuantity());
+                    productRepository.save(p);
+                }
             }
         }
         
