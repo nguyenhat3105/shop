@@ -20,6 +20,7 @@ import VerifyEmailPage   from './pages/VerifyEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VNPayReturnPage   from './pages/VNPayReturnPage';
+import SearchResultsPage from './pages/SearchResultsPage';
 import AdminLayout       from './pages/admin/AdminLayout';
 import AdminOrders       from './pages/admin/AdminOrders';
 import AdminProducts     from './pages/admin/AdminProducts';
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/vnpay-return"   element={<VNPayReturnPage />} />
+            <Route path="/search"         element={<SearchResultsPage />} />
             <Route 
               path="/orders" 
               element={

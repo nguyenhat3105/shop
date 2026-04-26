@@ -25,6 +25,7 @@ public class ProductServiceImpl implements ProductService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final ProductImageRepository productImageRepository;
+    private final com.example.shop.repository.ProductVariantRepository productVariantRepository;
 
     // ---------------------------------------------------------------
     // GET ALL — có phân trang
@@ -165,7 +166,53 @@ public class ProductServiceImpl implements ProductService {
     }
 
     // ---------------------------------------------------------------
-    // PRIVATE HELPERS
+    // VARIANT MANAGEMENT
+    // ---------------------------------------------------------------
+    @Override
+    public List<ProductVariantDto> getVariantsByProduct(Long productId) {
+        findProductOrThrow(productId);
+        return productVariantRepository.findByProductId(productId)
+                .stream()
+                .map(v -> ProductVariantDto.builder()
+                        .id(v.getId())
+                        .size(v.getSize())
+                        .color(v.getColor())
+                        .stock(v.getStock())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public ProductVariantDto addVariant(Long productId, ProductVariantDto request) {
+        Product product = findProductOrThrow(productId);
+        com.example.shop.entity.ProductVariant variant = com.example.shop.entity.ProductVariant.builder()
+                .product(product)
+                .size(request.getSize())
+                .color(request.getColor())
+                .stock(request.getStock() != null ? request.getStock() : 0)
+                .build();
+        com.example.shop.entity.ProductVariant saved = productVariantRepository.save(variant);
+        return ProductVariantDto.builder()
+                .id(saved.getId())
+                .size(saved.getSize())
+                .color(saved.getColor())
+                .stock(saved.getStock())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void deleteVariant(Long productId, Long variantId) {
+        com.example.shop.entity.ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new com.example.shop.exception.ResourceNotFoundException("Biến thể", variantId));
+        if (!variant.getProduct().getId().equals(productId)) {
+            throw new IllegalArgumentException("Biến thể không thuộc sản phẩm này.");
+        }
+        productVariantRepository.deleteById(variantId);
+    }
+
+
     // ---------------------------------------------------------------
 
     /** Chuyển Entity → DTO Response (tránh trả Lazy object về Controller) */

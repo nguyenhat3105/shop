@@ -69,6 +69,11 @@ export const createProduct = (data) => api.post('/products', data);
 export const updateProduct = (id, data) => api.put(`/products/${id}`, data);
 export const deleteProduct = (id) => api.delete(`/products/${id}`);
 
+// ── PRODUCT VARIANTS ──────────────────────────────────────────
+export const getProductVariants = (productId) => api.get(`/products/${productId}/variants`);
+export const addProductVariant  = (productId, data) => api.post(`/products/${productId}/variants`, data);
+export const deleteProductVariant = (productId, variantId) => api.delete(`/products/${productId}/variants/${variantId}`);
+
 // ── CATEGORY ─────────────────────────────────────────────────
 export const getCategories   = ()   => api.get('/categories');
 export const getCategoryById = (id) => api.get(`/categories/${id}`);

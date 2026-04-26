@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Menu, X, Gem, User, LogOut, ChevronDown, Shield } from 'lucide-react';
+import { ShoppingBag, Menu, X, Gem, User, LogOut, ChevronDown, Shield, Search } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
@@ -11,6 +11,8 @@ export default function Navbar() {
   const [scrolled,  setScrolled]  = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
   const [userMenu,  setUserMenu]  = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   const location   = useLocation();
   const navigate   = useNavigate();
   const userRef    = useRef(null);
@@ -33,6 +35,15 @@ export default function Navbar() {
   const handleLogout = async () => {
     await logout();
     navigate('/');
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      setShowSearch(false);
+    }
   };
 
   const links = [
@@ -68,6 +79,29 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="nb__actions">
+
+          {/* Search */}
+          <div className={`nb__search-wrap ${showSearch ? 'active' : ''}`}>
+            <form onSubmit={handleSearch} className="nb__search-form">
+              <input 
+                type="text" 
+                placeholder="Tìm sản phẩm..." 
+                className="nb__search-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button type="submit" className="nb__search-submit">
+                <Search size={16} />
+              </button>
+            </form>
+            <button 
+              className="nb__search-toggle" 
+              onClick={() => setShowSearch(!showSearch)}
+              aria-label="Tìm kiếm"
+            >
+              {showSearch ? <X size={18} /> : <Search size={18} />}
+            </button>
+          </div>
 
           {/* Cart */}
           <button className="nb__cart" onClick={openModal} aria-label="Giỏ hàng">

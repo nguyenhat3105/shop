@@ -1,59 +1,78 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ShoppingBag, ArrowLeft, Star, Truck, Shield, RotateCcw, Loader2, Eye } from 'lucide-react';
+import {
+  ShoppingBag, ArrowLeft, Star, Truck, Shield, RotateCcw,
+  Loader2, Eye, ChevronLeft, ChevronRight,
+} from 'lucide-react';
 import { getProductById, getReviews, addReview, getRelatedProducts } from '../services/api';
 import { useCart } from '../context/CartContext';
 import './ProductDetail.css';
 
+/* ─── Helpers ─── */
 const formatVND = (n) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
+/* ════════════════════════════════════════════════════════════════
+   ProductDetail
+════════════════════════════════════════════════════════════════ */
 export default function ProductDetail() {
   const { id } = useParams();
   const { addToCart, openModal } = useCart();
 
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [qty, setQty]         = useState(1);
-  const [added, setAdded]     = useState(false);
-  const [selectedSize, setSelectedSize] = useState('');
-  const [selectedColor, setSelectedColor] = useState('');
+  /* ─ Data ─ */
+  const [product, setProduct]   = useState(null);
+  const [loading, setLoading]   = useState(true);
 
-  // Reviews state
-  const [reviews, setReviews] = useState([]);
-  const [reviewText, setReviewText] = useState('');
-  const [rating, setRating] = useState(5);
-  const [submittingReview, setSubmittingReview] = useState(false);
-
-  // Related products state
-  const [relatedProducts, setRelatedProducts] = useState([]);
-
+  /* ─ Gallery ─ */
   const [activeImage, setActiveImage] = useState('');
 
+  /* ─ Variant selection ─ */
+  const [selectedSize,  setSelectedSize]  = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
+
+  /* ─ Qty ─ */
+  const [qty, setQty]     = useState(1);
+  const [added, setAdded] = useState(false);
+
+  /* ─ Reviews ─ */
+  const [reviews,          setReviews]          = useState([]);
+  const [reviewText,       setReviewText]       = useState('');
+  const [rating,           setRating]           = useState(5);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [hoverRating,      setHoverRating]      = useState(0);
+
+  /* ─ Related ─ */
+  const [relatedProducts, setRelatedProducts] = useState([]);
+
+  /* ─────────── Fetch ─────────── */
   useEffect(() => {
     setLoading(true);
     setAdded(false);
+    setSelectedSize('');
+    setSelectedColor('');
+    setQty(1);
+
     Promise.all([
       getProductById(id),
-      getReviews(id, 0, 10)
+      getReviews(id, 0, 10),
     ])
       .then(([prodRes, revRes]) => {
         const prod = prodRes.data;
         setProduct(prod);
-        setActiveImage(prod.imageUrl);
-        setReviews(revRes.data.content);
-        
-        // Mặc định chọn size và color đầu tiên
-        if (prod.variants && prod.variants.length > 0) {
-          const defaultVariant = prod.variants[0];
-          if (defaultVariant.size) setSelectedSize(defaultVariant.size);
-          if (defaultVariant.color) setSelectedColor(defaultVariant.color);
+        setActiveImage(prod.imageUrl || '');
+        setReviews(revRes.data.content || []);
+
+        // Default variant selection
+        if (prod.variants?.length > 0) {
+          const first = prod.variants[0];
+          if (first.size)  setSelectedSize(first.size);
+          if (first.color) setSelectedColor(first.color);
         }
-        
-        // Fetch related products
-        if (prodRes.data.categoryId) {
-          getRelatedProducts(prodRes.data.categoryId, prodRes.data.id)
-            .then(relRes => setRelatedProducts(relRes.data))
+
+        // Fetch related
+        if (prod.categoryId) {
+          getRelatedProducts(prod.categoryId, prod.id)
+            .then(r => setRelatedProducts(r.data))
             .catch(() => {});
         }
       })
@@ -61,11 +80,44 @@ export default function ProductDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  /* ─────────── Derived ─────────── */
+  const allImages = product
+    ? [product.imageUrl, ...(product.galleryImages || [])].filter(Boolean)
+    : [];
+
+  const uniqueSizes  = [...new Set((product?.variants || []).map(v => v.size).filter(Boolean))];
+  const uniqueColors = [...new Set((product?.variants || []).map(v => v.color).filter(Boolean))];
+
+  const currentVariant = product?.variants?.find(
+    v =>
+      (v.size  === selectedSize  || (!v.size  && !selectedSize)) &&
+      (v.color === selectedColor || (!v.color && !selectedColor))
+  );
+
+  const availableStock = currentVariant
+    ? currentVariant.stock
+    : (product?.stock ?? 0);
+
+  /* ─────────── Handlers ─────────── */
+  const handleAdd = () => {
+    if (!product || availableStock === 0) return;
+    const cartProduct = {
+      ...product,
+      selectedVariantId: currentVariant?.id,
+      selectedSize,
+      selectedColor,
+      _addQty: qty,
+    };
+    addToCart(cartProduct);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!reviewText.trim()) return;
+    setSubmittingReview(true);
     try {
-      setSubmittingReview(true);
       const res = await addReview(id, { rating, comment: reviewText });
       setReviews([res.data, ...reviews]);
       setReviewText('');
@@ -77,253 +129,350 @@ export default function ProductDetail() {
     }
   };
 
-  // Tìm variant đang được chọn để lấy stock chính xác
-  const currentVariant = product?.variants?.find(
-    v => (v.size === selectedSize || (!v.size && !selectedSize)) && 
-         (v.color === selectedColor || (!v.color && !selectedColor))
-  );
-
-  const availableStock = currentVariant ? currentVariant.stock : (product?.stock || 0);
-
-  const handleAdd = () => {
-    if (!product) return;
-    
-    // Tạo product copy với thông tin variant
-    const cartProduct = {
-      ...product,
-      selectedVariantId: currentVariant?.id,
-      selectedSize,
-      selectedColor
-    };
-
-    addToCart({ ...cartProduct, _addQty: qty });
-    
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1800);
+  const prevImage = () => {
+    const idx = allImages.indexOf(activeImage);
+    setActiveImage(allImages[(idx - 1 + allImages.length) % allImages.length]);
+  };
+  const nextImage = () => {
+    const idx = allImages.indexOf(activeImage);
+    setActiveImage(allImages[(idx + 1) % allImages.length]);
   };
 
+  /* ─────────── Loading / Not found ─────────── */
   if (loading) return (
-    <div className="pd-loading">
-      <Loader2 size={40} className="spin" />
+    <div className="pd-page">
+      <div className="pd-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <Loader2 size={40} className="spin" style={{ color: 'var(--accent)' }} />
+      </div>
     </div>
   );
 
   if (!product) return (
-    <div className="pd-loading">
-      <p>Không tìm thấy sản phẩm.</p>
-      <Link to="/" className="back-link"><ArrowLeft size={16}/> Về trang chủ</Link>
+    <div className="pd-page">
+      <div className="pd-container" style={{ textAlign: 'center', paddingTop: '4rem' }}>
+        <p style={{ fontSize: '1.2rem', color: 'var(--text-2)', marginBottom: '1.5rem' }}>Không tìm thấy sản phẩm.</p>
+        <Link to="/" className="back-link">
+          <ArrowLeft size={16} /> Về trang chủ
+        </Link>
+      </div>
     </div>
   );
 
-  const allImages = [product.imageUrl, ...(product.galleryImages || [])].filter(Boolean);
+  const avgRating = product.averageRating || 0;
+  const hasVariants = product.variants?.length > 0;
 
   return (
     <div className="pd-page">
       <div className="pd-container">
-        <Link to="/" className="back-link"><ArrowLeft size={16}/> Tiếp tục mua sắm</Link>
 
-        <div className="pd-grid">
-          {/* Image Gallery */}
-          <div className="pd-gallery">
+        {/* ── Back ── */}
+        <Link to="/" className="back-link">
+          <ArrowLeft size={15} /> Tiếp tục mua sắm
+        </Link>
+
+        {/* ═══════════════════════════════════════
+            MAIN GRID: IMAGE | INFO
+        ═══════════════════════════════════════ */}
+        <div className="pd-layout">
+
+          {/* ── Left: Gallery ── */}
+          <div className="pd-gallery-col">
             <div className="pd-img-wrap">
               <img
-                src={activeImage || `https://picsum.photos/seed/${product.id}/600/500`}
+                key={activeImage}
+                src={activeImage || `https://picsum.photos/seed/${product.id}/600/750`}
                 alt={product.name}
+                className="pd-img"
               />
-              <div className="pd-img-shine" />
+              {/* Arrow nav for gallery */}
+              {allImages.length > 1 && (
+                <>
+                  <button className="pd-arrow pd-arrow--left"  onClick={prevImage} aria-label="Previous"><ChevronLeft size={20} /></button>
+                  <button className="pd-arrow pd-arrow--right" onClick={nextImage} aria-label="Next"><ChevronRight size={20} /></button>
+                </>
+              )}
+              {/* Badge */}
+              {availableStock === 0 && (
+                <span className="pd-badge-soldout">Hết hàng</span>
+              )}
             </div>
+
+            {/* Thumbnails */}
             {allImages.length > 1 && (
-              <div className="pd-thumbnails" style={{ display: 'flex', gap: '10px', marginTop: '15px', overflowX: 'auto' }}>
-                {allImages.map((img, idx) => (
-                  <img 
-                    key={idx} 
-                    src={img} 
-                    alt="Thumbnail" 
+              <div className="pd-thumbs">
+                {allImages.map((img, i) => (
+                  <button
+                    key={i}
+                    className={`pd-thumb ${activeImage === img ? 'active' : ''}`}
                     onClick={() => setActiveImage(img)}
-                    style={{ 
-                      width: '80px', height: '80px', objectFit: 'cover', cursor: 'pointer',
-                      border: activeImage === img ? '2px solid var(--gold)' : '1px solid #ddd',
-                      borderRadius: '4px'
-                    }}
+                    style={{ backgroundImage: `url(${img})` }}
+                    aria-label={`Ảnh ${i + 1}`}
                   />
                 ))}
               </div>
             )}
           </div>
 
-          {/* Info */}
+          {/* ── Right: Info ── */}
           <div className="pd-info">
+            {/* Category */}
             {product.categoryName && (
               <span className="pd-category">{product.categoryName}</span>
             )}
+
+            {/* Name */}
             <h1 className="pd-name">{product.name}</h1>
 
+            {/* Rating */}
             <div className="pd-rating">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} size={14}
-                  fill={i < Math.round(product.averageRating || 0) ? 'currentColor' : 'none'}
-                  style={{ color: i < Math.round(product.averageRating || 0) ? 'var(--gold)' : 'var(--border)' }}
+              {[1, 2, 3, 4, 5].map(s => (
+                <Star
+                  key={s} size={14}
+                  fill={s <= Math.round(avgRating) ? 'currentColor' : 'none'}
+                  className={s <= Math.round(avgRating) ? 'star-on' : 'star-off'}
                 />
               ))}
               <span>({product.reviewCount || 0} đánh giá)</span>
             </div>
 
+            {/* Price */}
             <div className="pd-price">{formatVND(product.price)}</div>
 
+            <div className="pd-divider" />
+
+            {/* Description */}
             <p className="pd-desc">
-              {product.description || 'Sản phẩm chất lượng cao cấp, được tuyển chọn kỹ lưỡng.'}
+              {product.description || 'Sản phẩm chất lượng cao cấp, được tuyển chọn kỹ lưỡng từ những nguyên liệu tốt nhất.'}
             </p>
 
-            <div className={`pd-stock ${availableStock === 0 ? 'out' : ''}`}>
-              {availableStock > 0 ? `✓ Còn hàng (${availableStock} sản phẩm)` : '✗ Hết hàng'}
-            </div>
+            {/* Stock indicator */}
+            <p className="pd-stock" style={{ color: availableStock > 0 ? 'var(--success)' : '#e53e3e', fontWeight: 500 }}>
+              {availableStock > 0
+                ? `✓ Còn hàng (${availableStock} sản phẩm)`
+                : '✗ Hết hàng'}
+            </p>
 
-            {/* Variants Selector */}
-            {product.variants && product.variants.length > 0 && (
-              <div className="pd-variants">
-                {/* Size Selector */}
-                {Array.from(new Set(product.variants.map(v => v.size).filter(Boolean))).length > 0 && (
-                  <div className="variant-group">
-                    <h4>Kích cỡ:</h4>
-                    <div className="variant-options">
-                      {Array.from(new Set(product.variants.map(v => v.size).filter(Boolean))).map(s => (
-                        <button 
-                          key={s} 
-                          className={`variant-btn ${selectedSize === s ? 'active' : ''}`}
-                          onClick={() => { setSelectedSize(s); setQty(1); }}
-                        >
-                          {s}
-                        </button>
-                      ))}
+            {/* ── Variant Selectors ── */}
+            {hasVariants && (
+              <div className="pd-variants-section">
+                {uniqueSizes.length > 0 && (
+                  <div className="pd-variant-group">
+                    <p className="pd-variant-label">
+                      Kích cỡ: <strong>{selectedSize}</strong>
+                    </p>
+                    <div className="pd-variant-options">
+                      {uniqueSizes.map(s => {
+                        const variantForSize = product.variants.find(
+                          v => v.size === s && (v.color === selectedColor || !selectedColor || !v.color)
+                        );
+                        const outOfStock = variantForSize ? variantForSize.stock === 0 : false;
+                        return (
+                          <button
+                            key={s}
+                            className={`pd-variant-btn ${selectedSize === s ? 'active' : ''} ${outOfStock ? 'disabled' : ''}`}
+                            onClick={() => { if (!outOfStock) { setSelectedSize(s); setQty(1); } }}
+                            disabled={outOfStock}
+                            title={outOfStock ? 'Hết hàng' : ''}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
-                {/* Color Selector */}
-                {Array.from(new Set(product.variants.map(v => v.color).filter(Boolean))).length > 0 && (
-                  <div className="variant-group" style={{ marginTop: '15px' }}>
-                    <h4>Màu sắc:</h4>
-                    <div className="variant-options">
-                      {Array.from(new Set(product.variants.map(v => v.color).filter(Boolean))).map(c => (
-                        <button 
-                          key={c} 
-                          className={`variant-btn ${selectedColor === c ? 'active' : ''}`}
-                          onClick={() => { setSelectedColor(c); setQty(1); }}
-                        >
-                          {c}
-                        </button>
-                      ))}
+                {uniqueColors.length > 0 && (
+                  <div className="pd-variant-group">
+                    <p className="pd-variant-label">
+                      Màu sắc: <strong>{selectedColor}</strong>
+                    </p>
+                    <div className="pd-variant-options">
+                      {uniqueColors.map(c => {
+                        const variantForColor = product.variants.find(
+                          v => v.color === c && (v.size === selectedSize || !selectedSize || !v.size)
+                        );
+                        const outOfStock = variantForColor ? variantForColor.stock === 0 : false;
+                        return (
+                          <button
+                            key={c}
+                            className={`pd-variant-btn pd-color-btn ${selectedColor === c ? 'active' : ''} ${outOfStock ? 'disabled' : ''}`}
+                            onClick={() => { if (!outOfStock) { setSelectedColor(c); setQty(1); } }}
+                            disabled={outOfStock}
+                          >
+                            {c}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Qty + Actions */}
-            <div className="pd-actions" style={{ marginTop: '20px' }}>
-              <div className="qty-wrap">
-                <button onClick={() => setQty(v => Math.max(1, v - 1))}>−</button>
-                <span>{qty}</span>
-                <button onClick={() => setQty(v => Math.min(availableStock || 99, v + 1))}>+</button>
+            {/* ── Qty + Add ── */}
+            <div className="pd-actions-row">
+              <div className="pd-qty-wrap">
+                <span className="pd-qty-label">SL</span>
+                <div className="pd-qty">
+                  <button
+                    className="pd-qty__btn"
+                    onClick={() => setQty(v => Math.max(1, v - 1))}
+                    disabled={qty <= 1}
+                  >−</button>
+                  <span className="pd-qty__val">{qty}</span>
+                  <button
+                    className="pd-qty__btn"
+                    onClick={() => setQty(v => Math.min(availableStock || 99, v + 1))}
+                    disabled={qty >= (availableStock || 99)}
+                  >+</button>
+                </div>
               </div>
+
               <button
                 className={`pd-add-btn ${added ? 'added' : ''}`}
                 onClick={handleAdd}
                 disabled={availableStock === 0}
               >
-                <ShoppingBag size={18} />
-                {added ? '✓ Đã thêm vào giỏ!' : 'Thêm vào giỏ hàng'}
+                <ShoppingBag size={17} />
+                {added ? '✓ Đã thêm!' : 'Thêm vào giỏ'}
               </button>
             </div>
 
-            {/* View cart CTA */}
+            {/* View cart prompt */}
             {added && (
-              <button className="pd-view-cart-btn" onClick={openModal}>
-                <Eye size={15} /> Xem giỏ hàng →
+              <button className="pd-view-cart" onClick={openModal}>
+                <Eye size={14} /> Xem giỏ hàng →
               </button>
             )}
 
+            {/* Perks */}
             <div className="pd-perks">
-              <div className="perk"><Truck size={16}/><span>Miễn phí giao hàng toàn quốc</span></div>
-              <div className="perk"><Shield size={16}/><span>Bảo hành 12 tháng chính hãng</span></div>
-              <div className="perk"><RotateCcw size={16}/><span>Đổi trả trong vòng 30 ngày</span></div>
+              <div className="pd-perk"><Truck size={15} /><span>Miễn phí giao hàng toàn quốc</span></div>
+              <div className="pd-perk"><Shield size={15} /><span>Bảo hành 12 tháng chính hãng</span></div>
+              <div className="pd-perk"><RotateCcw size={15} /><span>Đổi trả miễn phí trong 30 ngày</span></div>
             </div>
           </div>
         </div>
 
-        {/* Related Products Section */}
+        {/* ═══════════════════════════════════════
+            RELATED PRODUCTS
+        ═══════════════════════════════════════ */}
         {relatedProducts.length > 0 && (
-          <div className="pd-related-section" style={{ marginTop: '60px', borderTop: '1px solid #eee', paddingTop: '40px' }}>
-            <h2 style={{ fontSize: '24px', marginBottom: '30px', fontFamily: 'var(--font-serif)', textAlign: 'center' }}>Sản phẩm Tương tự</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '30px' }}>
+          <section className="pd-related">
+            <h2 className="pd-section-title">Sản phẩm tương tự</h2>
+            <div className="pd-related-grid">
               {relatedProducts.map(rp => (
-                <Link to={`/products/${rp.id}`} key={rp.id} style={{ textDecoration: 'none', color: 'inherit', display: 'block', transition: 'transform 0.3s' }} className="related-card">
-                  <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '8px', marginBottom: '15px' }}>
-                    <img src={rp.imageUrl || `https://picsum.photos/seed/${rp.id}/400/400`} alt={rp.name} style={{ width: '100%', height: '280px', objectFit: 'cover' }} />
+                <Link to={`/products/${rp.id}`} key={rp.id} className="pd-related-card">
+                  <div className="pd-related-img-wrap">
+                    <img
+                      src={rp.imageUrl || `https://picsum.photos/seed/${rp.id}/400/500`}
+                      alt={rp.name}
+                      className="pd-related-img"
+                    />
                   </div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rp.name}</h3>
-                  <p style={{ color: 'var(--gold)', fontWeight: 'bold' }}>{formatVND(rp.price)}</p>
+                  <div className="pd-related-info">
+                    <h3 className="pd-related-name">{rp.name}</h3>
+                    <p className="pd-related-price">{formatVND(rp.price)}</p>
+                  </div>
                 </Link>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Reviews Section */}
-        <div className="pd-reviews-section" style={{ marginTop: '60px', borderTop: '1px solid #eee', paddingTop: '40px' }}>
-          <h2 style={{ fontSize: '24px', marginBottom: '20px', fontFamily: 'var(--font-serif)' }}>Đánh giá Sản phẩm</h2>
-          
-          <form onSubmit={handleReviewSubmit} style={{ marginBottom: '40px', background: '#f9f9f9', padding: '20px', borderRadius: '8px' }}>
-            <h3 style={{ fontSize: '16px', marginBottom: '15px' }}>Viết đánh giá của bạn</h3>
-            <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star 
-                  key={star} 
-                  size={20} 
-                  onClick={() => setRating(star)}
-                  style={{ cursor: 'pointer', color: star <= rating ? 'var(--gold)' : '#ccc' }}
-                  fill={star <= rating ? 'currentColor' : 'none'}
+        {/* ═══════════════════════════════════════
+            REVIEWS
+        ═══════════════════════════════════════ */}
+        <section className="pd-reviews">
+          <h2 className="pd-section-title">Đánh giá sản phẩm</h2>
+
+          {/* Overall rating */}
+          <div className="pd-rating-summary">
+            <div className="pd-rating-big">{avgRating.toFixed(1)}</div>
+            <div>
+              <div className="pd-rating" style={{ gap: '3px', marginBottom: '6px' }}>
+                {[1,2,3,4,5].map(s => (
+                  <Star key={s} size={18}
+                    fill={s <= Math.round(avgRating) ? 'currentColor' : 'none'}
+                    className={s <= Math.round(avgRating) ? 'star-on' : 'star-off'}
+                  />
+                ))}
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{product.reviewCount || 0} lượt đánh giá</p>
+            </div>
+          </div>
+
+          {/* Write review form */}
+          <form onSubmit={handleReviewSubmit} className="pd-review-form">
+            <h3 className="pd-review-form-title">Viết đánh giá của bạn</h3>
+
+            {/* Star picker */}
+            <div className="pd-star-picker">
+              {[1,2,3,4,5].map(s => (
+                <Star
+                  key={s} size={26}
+                  className={`pd-star-pick ${s <= (hoverRating || rating) ? 'active' : ''}`}
+                  fill={s <= (hoverRating || rating) ? 'currentColor' : 'none'}
+                  onClick={() => setRating(s)}
+                  onMouseEnter={() => setHoverRating(s)}
+                  onMouseLeave={() => setHoverRating(0)}
                 />
               ))}
+              <span className="pd-star-label">
+                {['', 'Rất tệ', 'Tệ', 'Bình thường', 'Tốt', 'Xuất sắc'][hoverRating || rating]}
+              </span>
             </div>
-            <textarea 
+
+            <textarea
               value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
+              onChange={e => setReviewText(e.target.value)}
               placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."
-              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', minHeight: '80px', marginBottom: '15px', fontFamily: 'inherit' }}
+              className="pd-review-textarea"
+              rows={4}
             />
-            <button 
-              type="submit" 
-              disabled={submittingReview}
-              style={{ padding: '10px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+            <button
+              type="submit"
+              disabled={submittingReview || !reviewText.trim()}
+              className="pd-review-submit"
             >
-              {submittingReview ? 'Đang gửi...' : 'Gửi Đánh Giá'}
+              {submittingReview ? <><Loader2 size={15} className="spin" /> Đang gửi...</> : 'Gửi đánh giá'}
             </button>
           </form>
 
-          <div className="pd-reviews-list">
+          {/* Review list */}
+          <div className="pd-review-list">
             {reviews.length === 0 ? (
-              <p style={{ color: '#666', fontStyle: 'italic' }}>Chưa có đánh giá nào cho sản phẩm này.</p>
+              <p className="pd-review-empty">Chưa có đánh giá. Hãy là người đầu tiên!</p>
             ) : (
               reviews.map(review => (
-                <div key={review.id} style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <strong>{review.userName}</strong>
-                    <div style={{ display: 'flex' }}>
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={12} fill={i < review.rating ? 'var(--gold)' : 'none'} color={i < review.rating ? 'var(--gold)' : '#ccc'} />
-                      ))}
+                <div key={review.id} className="pd-review-item">
+                  <div className="pd-review-header">
+                    <div className="pd-review-avatar">
+                      {review.userName?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
-                    <span style={{ color: '#999', fontSize: '12px', marginLeft: 'auto' }}>
+                    <div className="pd-review-meta">
+                      <strong className="pd-review-author">{review.userName}</strong>
+                      <div className="pd-rating" style={{ gap: '2px' }}>
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} size={12}
+                            fill={s <= review.rating ? 'currentColor' : 'none'}
+                            className={s <= review.rating ? 'star-on' : 'star-off'}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <span className="pd-review-date">
                       {new Date(review.createdAt).toLocaleDateString('vi-VN')}
                     </span>
                   </div>
-                  <p style={{ color: '#444', lineHeight: 1.5 }}>{review.comment}</p>
+                  <p className="pd-review-text">{review.comment}</p>
                 </div>
               ))
             )}
           </div>
-        </div>
+        </section>
+
       </div>
     </div>
   );

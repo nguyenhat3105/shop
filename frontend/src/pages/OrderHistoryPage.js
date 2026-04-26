@@ -121,6 +121,11 @@ export default function OrderHistoryPage() {
                         </Link>
                         <div className="oh-item-meta">
                           Số lượng: {item.quantity}
+                          {(item.size || item.color) && (
+                            <span style={{ marginLeft: '10px', color: '#666' }}>
+                              ({item.size && `Size: ${item.size}`}{item.size && item.color && ', '}{item.color && `Màu: ${item.color}`})
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="oh-item-price">

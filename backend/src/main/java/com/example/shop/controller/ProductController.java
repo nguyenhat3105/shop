@@ -145,4 +145,32 @@ public class ProductController {
     ) {
         return ResponseEntity.ok(productService.getRelatedProducts(categoryId, excludeId));
     }
+
+    // ---------------------------------------------------------------
+    // VARIANT MANAGEMENT
+    // ---------------------------------------------------------------
+    @GetMapping("/{id}/variants")
+    public ResponseEntity<java.util.List<com.example.shop.dto.ProductVariantDto>> getVariants(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(productService.getVariantsByProduct(id));
+    }
+
+    @PostMapping("/{id}/variants")
+    public ResponseEntity<com.example.shop.dto.ProductVariantDto> addVariant(
+            @PathVariable Long id,
+            @RequestBody com.example.shop.dto.ProductVariantDto request
+    ) {
+        com.example.shop.dto.ProductVariantDto created = productService.addVariant(id, request);
+        return ResponseEntity.status(201).body(created);
+    }
+
+    @DeleteMapping("/{productId}/variants/{variantId}")
+    public ResponseEntity<Void> deleteVariant(
+            @PathVariable Long productId,
+            @PathVariable Long variantId
+    ) {
+        productService.deleteVariant(productId, variantId);
+        return ResponseEntity.noContent().build();
+    }
 }
