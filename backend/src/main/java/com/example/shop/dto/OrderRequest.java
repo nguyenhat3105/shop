@@ -25,8 +25,7 @@ public class OrderRequest {
     @NotBlank(message = "Số điện thoại không được để trống")
     private String phone;
 
-    @NotBlank(message = "Địa chỉ giao hàng không được để trống")
-    private String address;
+    private Long addressId;
 
     @NotNull(message = "Tổng tiền không được để trống")
     private BigDecimal totalAmount;
