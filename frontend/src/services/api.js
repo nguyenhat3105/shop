@@ -94,4 +94,11 @@ export const createPaymentUrl = (orderId) => api.get('/payment/create-url', { pa
 // ── ADMIN ────────────────────────────────────────────────────
 export const getAnalytics = () => api.get('/admin/analytics');
 
+// ── WISHLIST ─────────────────────────────────────────────────
+export const getWishlist    = ()   => api.get('/wishlist');
+export const addToWishlist = (id) => api.post(`/wishlist/${id}`);
+export const removeFromWishlist = (id) => api.delete(`/wishlist/${id}`);
+export const checkInWishlist = (id) => api.get(`/wishlist/check/${id}`);
+
 export default api;
+

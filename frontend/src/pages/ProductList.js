@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { getProducts, searchProducts } from '../services/api';
-import './ProductList.css';
+import ProductCard from '../components/ProductCard';
+import { SkeletonGrid } from '../components/SkeletonCard';
+import { Search, Loader2 } from 'lucide-react';
 
-function ProductList() {
+export default function ProductList() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState('');
@@ -39,40 +40,44 @@ function ProductList() {
   };
 
   return (
-    <div className="product-list-page">
-      <form className="search-bar" onSubmit={handleSearch}>
-        <input
-          type="text"
-          placeholder="Tìm kiếm sản phẩm..."
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
-        <button type="submit">Tìm</button>
-      </form>
+    <div className="min-h-screen bg-[#faf9f7] py-12 px-4">
+      <div className="max-w-7xl mx-auto">
+        <form className="flex gap-2 mb-8 max-w-xl" onSubmit={handleSearch}>
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-gray-300 focus:ring-4 focus:ring-gray-100 transition-all text-[0.95rem]"
+              placeholder="Tìm kiếm sản phẩm..."
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+          </div>
+          <button 
+            type="submit"
+            className="px-6 py-3 bg-[#111] text-white rounded-xl font-semibold transition-all hover:bg-[#222] active:scale-95 whitespace-nowrap"
+          >
+            Tìm kiếm
+          </button>
+        </form>
 
-      {loading ? (
-        <p className="loading">Đang tải...</p>
-      ) : (
-        <div className="product-grid">
-          {products.map((product) => (
-            <Link to={`/products/${product.id}`} key={product.id} className="product-card">
-              <img
-                src={product.imageUrl || 'https://via.placeholder.com/300x200'}
-                alt={product.name}
-              />
-              <div className="product-info">
-                <h3>{product.name}</h3>
-                <p className="price">
-                  {product.price?.toLocaleString('vi-VN')}₫
-                </p>
-                <p className="stock">Còn: {product.stock} sản phẩm</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+        {loading ? (
+          <div className="py-12">
+            <SkeletonGrid count={8} />
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-4 py-20 text-gray-500">
+            <Search size={40} className="opacity-20" />
+            <p>Không tìm thấy sản phẩm nào.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6">
+            {products.map((product, i) => (
+              <ProductCard key={product.id} product={product} index={i} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
-export default ProductList;

@@ -25,6 +25,7 @@ import AdminLayout       from './pages/admin/AdminLayout';
 import AdminOrders       from './pages/admin/AdminOrders';
 import AdminProducts     from './pages/admin/AdminProducts';
 import AdminDashboard    from './pages/admin/AdminDashboard';
+import WishlistPage      from './pages/WishlistPage';
 import './index.css';
 
 export default function App() {
@@ -55,6 +56,15 @@ export default function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/wishlist" 
+              element={
+                <ProtectedRoute>
+                  <WishlistPage />
+                </ProtectedRoute>
+              } 
+            />
+
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
