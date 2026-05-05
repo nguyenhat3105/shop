@@ -13,4 +13,7 @@ public class ResourceNotFoundException extends RuntimeException {
     public ResourceNotFoundException(String resourceName, Long id) {
         super(String.format("Không tìm thấy %s với id = %d", resourceName, id));
     }
+
+    public ResourceNotFoundException(String resourceName) {
+    }
 }

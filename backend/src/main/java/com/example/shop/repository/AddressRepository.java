@@ -2,10 +2,19 @@ package com.example.shop.repository;
 
 import com.example.shop.entity.Address;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface AddressRepository extends JpaRepository<Address,Long> {
-    List<Address> findByUserId(Long userId);
-    Address findByIdAndUserId(Long id, Long userId);
+@Repository
+public interface AddressRepository extends JpaRepository<Address, Long> {
+    
+    List<Address> findByUserIdOrderByIsDefaultDescIdDesc(Long userId);
+    
+    Optional<Address> findByIdAndUserId(Long id, Long userId);
+    
+    Optional<Address> findByUserIdAndIsDefaultTrue(Long userId);
+    
+    long countByUserId(Long userId);
 }
