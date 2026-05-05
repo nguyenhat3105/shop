@@ -8,6 +8,8 @@ import com.example.shop.exception.ResourceNotFoundException;
 import com.example.shop.repository.AddressRepository;
 import com.example.shop.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,97 +23,79 @@ public class AddressServiceImpl implements AddressService {
     private final AddressRepository addressRepository;
     private final UserRepository userRepository;
 
+    // ─── Lấy user hiện tại từ SecurityContext ───────────────────────────────
+
+    private User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại: " + email));
+    }
+
+    // ─── Public API ──────────────────────────────────────────────────────────
+
     @Override
-    public List<AddressResponse> getAddressesByUserId(Long userId) {
-        return addressRepository.findByUserId(userId).stream()
+    public List<AddressResponse> getMyAddresses() {
+        User user = getCurrentUser();
+        return addressRepository
+                .findByUserIdOrderByIsDefaultDescIdDesc(user.getId())
+                .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<AddressResponse> getAddressesByEmail(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-        return getAddressesByUserId(user.getId());
+    public AddressResponse getAddressById(Long id) {
+        User user = getCurrentUser();
+        Address address = findAddressOfUser(id, user.getId());
+        return mapToResponse(address);
+    }
+
+    @Override
+    public AddressResponse getDefaultAddress() {
+        User user = getCurrentUser();
+        return addressRepository.findByUserIdAndIsDefaultTrue(user.getId())
+                .map(this::mapToResponse)
+                .orElse(null);
     }
 
     @Override
     @Transactional
-    public AddressResponse addAddress(String email, AddressRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+    public AddressResponse createAddress(AddressRequest request) {
+        User user = getCurrentUser();
 
-        if (request.isDefault()) {
-            resetDefaultAddress(user.getId());
+        // Nếu là địa chỉ đầu tiên hoặc request yêu cầu đặt mặc định → reset rồi set
+        long count = addressRepository.countByUserId(user.getId());
+        boolean shouldBeDefault = count == 0 || request.isDefault();
+
+        if (shouldBeDefault) {
+            addressRepository.resetAllDefaultsByUserId(user.getId());
         }
 
-        Address address = new Address();
-        mapToEntity(address, request);
-        address.setUser(user);
+        Address address = Address.builder()
+                .user(user)
+                .receiverName(request.getReceiverName())
+                .phoneNumber(request.getPhoneNumber())
+                .province(request.getProvince())
+                .district(request.getDistrict())
+                .ward(request.getWard())
+                .detailAddress(request.getDetailAddress())
+                .isDefault(shouldBeDefault)
+                .build();
 
         return mapToResponse(addressRepository.save(address));
     }
 
     @Override
     @Transactional
-    public AddressResponse updateAddress(Long addressId, String email, AddressRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-        
-        Address address = addressRepository.findByIdAndUserId(addressId, user.getId());
-        if (address == null) {
-            throw new ResourceNotFoundException("Address not found or not owned by user");
-        }
+    public AddressResponse updateAddress(Long id, AddressRequest request) {
+        User user = getCurrentUser();
+        Address address = findAddressOfUser(id, user.getId());
 
         if (request.isDefault() && !address.isDefault()) {
-            resetDefaultAddress(user.getId());
+            addressRepository.resetAllDefaultsByUserId(user.getId());
         }
 
-        mapToEntity(address, request);
-        return mapToResponse(addressRepository.save(address));
-    }
-
-    @Override
-    @Transactional
-    public void deleteAddress(Long addressId, String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-        
-        Address address = addressRepository.findByIdAndUserId(addressId, user.getId());
-        if (address == null) {
-            throw new ResourceNotFoundException("Address not found or not owned by user");
-        }
-        addressRepository.delete(address);
-    }
-
-    @Override
-    @Transactional
-    public AddressResponse setDefaultAddress(Long addressId, String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-        
-        resetDefaultAddress(user.getId());
-        
-        Address address = addressRepository.findByIdAndUserId(addressId, user.getId());
-        if (address == null) {
-            throw new ResourceNotFoundException("Address not found or not owned by user");
-        }
-        
-        address.setDefault(true);
-        return mapToResponse(addressRepository.save(address));
-    }
-
-    private void resetDefaultAddress(Long userId) {
-        List<Address> addresses = addressRepository.findByUserId(userId);
-        for (Address addr : addresses) {
-            if (addr.isDefault()) {
-                addr.setDefault(false);
-                addressRepository.save(addr);
-            }
-        }
-    }
-
-    private void mapToEntity(Address address, AddressRequest request) {
         address.setReceiverName(request.getReceiverName());
         address.setPhoneNumber(request.getPhoneNumber());
         address.setProvince(request.getProvince());
@@ -119,18 +103,66 @@ public class AddressServiceImpl implements AddressService {
         address.setWard(request.getWard());
         address.setDetailAddress(request.getDetailAddress());
         address.setDefault(request.isDefault());
+
+        return mapToResponse(addressRepository.save(address));
+    }
+
+    @Override
+    @Transactional
+    public AddressResponse setDefaultAddress(Long id) {
+        User user = getCurrentUser();
+        Address address = findAddressOfUser(id, user.getId());
+
+        // Reset tất cả rồi set cái này
+        addressRepository.resetAllDefaultsByUserId(user.getId());
+        address.setDefault(true);
+
+        return mapToResponse(addressRepository.save(address));
+    }
+
+    @Override
+    @Transactional
+    public void deleteAddress(Long id) {
+        User user = getCurrentUser();
+        Address address = findAddressOfUser(id, user.getId());
+
+        boolean wasDefault = address.isDefault();
+        addressRepository.delete(address);
+
+        // Nếu xoá địa chỉ mặc định → tự động gán cho địa chỉ đầu tiên còn lại
+        if (wasDefault) {
+            List<Address> remaining =
+                    addressRepository.findByUserIdOrderByIsDefaultDescIdDesc(user.getId());
+            if (!remaining.isEmpty()) {
+                Address next = remaining.get(0);
+                next.setDefault(true);
+                addressRepository.save(next);
+            }
+        }
+    }
+
+    // ─── Private helpers ─────────────────────────────────────────────────────
+
+    private Address findAddressOfUser(Long addressId, Long userId) {
+        return addressRepository.findByIdAndUserId(addressId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Địa chỉ không tồn tại hoặc bạn không có quyền truy cập (id=" + addressId + ")"
+                ));
     }
 
     private AddressResponse mapToResponse(Address address) {
-        AddressResponse response = new AddressResponse();
-        response.setId(address.getId());
-        response.setReceiverName(address.getReceiverName());
-        response.setPhoneNumber(address.getPhoneNumber());
-        response.setProvince(address.getProvince());
-        response.setDistrict(address.getDistrict());
-        response.setWard(address.getWard());
-        response.setDetailAddress(address.getDetailAddress());
-        response.setDefault(address.isDefault());
-        return response;
+        return AddressResponse.builder()
+                .id(address.getId())
+                .userId(address.getUser().getId())
+                .receiverName(address.getReceiverName())
+                .phoneNumber(address.getPhoneNumber())
+                .province(address.getProvince())
+                .district(address.getDistrict())
+                .ward(address.getWard())
+                .detailAddress(address.getDetailAddress())
+                .isDefault(address.isDefault())
+                .createdAt(address.getCreatedAt() != null
+                        ? address.getCreatedAt().toString() : null)
+                .build();
     }
 }

@@ -52,6 +52,9 @@ public class SecurityConfig {
                 // ── Orders: cần đăng nhập ──
                 .requestMatchers("/api/orders/**").authenticated()
 
+                // ── Addresses: cần đăng nhập ──
+                .requestMatchers("/api/addresses/**").authenticated()
+
                 // ── User profile ──
                 .requestMatchers("/api/users/me").authenticated()
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
