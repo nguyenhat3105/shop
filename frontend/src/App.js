@@ -25,7 +25,13 @@ import AdminLayout       from './pages/admin/AdminLayout';
 import AdminOrders       from './pages/admin/AdminOrders';
 import AdminProducts     from './pages/admin/AdminProducts';
 import AdminDashboard    from './pages/admin/AdminDashboard';
+import AdminInventory    from './pages/admin/AdminInventory';
+import LoyaltyPage      from './pages/LoyaltyPage';
+import CheckoutPage     from './pages/CheckoutPage';
+import OrderSuccessPage from './pages/OrderSuccessPage';
 import './index.css';
+
+
 
 export default function App() {
   return (
@@ -47,6 +53,9 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/vnpay-return"   element={<VNPayReturnPage />} />
             <Route path="/search"         element={<SearchResultsPage />} />
+            <Route path="/checkout"        element={<CheckoutPage />} />
+            <Route path="/order-success"   element={<OrderSuccessPage />} />
+
             <Route 
               path="/orders" 
               element={
@@ -55,11 +64,21 @@ export default function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/loyalty" 
+              element={
+                <ProtectedRoute>
+                  <LoyaltyPage />
+                </ProtectedRoute>
+              } 
+            />
+
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="products" element={<AdminProducts />} />
+              <Route path="orders"    element={<AdminOrders />} />
+              <Route path="products"  element={<AdminProducts />} />
+              <Route path="inventory" element={<AdminInventory />} />
             </Route>
           </Routes>
           <Footer />

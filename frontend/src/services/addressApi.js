@@ -1,38 +1,23 @@
+import api from './api';
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
-
 // ════════════════════════════════════════
-// ADDRESS APIs
+// ADDRESS APIs — use authenticated instance
 // ════════════════════════════════════════
 
-export const getMyAddresses = () => 
-  axios.get(`${API_BASE}/addresses`);
-
-export const getDefaultAddress = () => 
-  axios.get(`${API_BASE}/addresses/default`);
-
-export const getAddressById = (id) => 
-  axios.get(`${API_BASE}/addresses/${id}`);
-
-export const createAddress = (data) => 
-  axios.post(`${API_BASE}/addresses`, data);
-
-export const updateAddress = (id, data) => 
-  axios.put(`${API_BASE}/addresses/${id}`, data);
-
-export const setDefaultAddress = (id) => 
-  axios.patch(`${API_BASE}/addresses/${id}/set-default`);
-
-export const deleteAddress = (id) => 
-  axios.delete(`${API_BASE}/addresses/${id}`);
+export const getMyAddresses    = ()       => api.get('/addresses');
+export const getDefaultAddress = ()       => api.get('/addresses/default');
+export const getAddressById    = (id)     => api.get(`/addresses/${id}`);
+export const createAddress     = (data)   => api.post('/addresses', data);
+export const updateAddress     = (id, d)  => api.put(`/addresses/${id}`, d);
+export const setDefaultAddress = (id)     => api.patch(`/addresses/${id}/set-default`);
+export const deleteAddress     = (id)     => api.delete(`/addresses/${id}`);
 
 // ════════════════════════════════════════
-// VIETNAM ADDRESS DATA
+// VIETNAM ADDRESS DATA — public API (no auth)
 // ════════════════════════════════════════
 
 export const getProvinces = async () => {
-  // Using Vietnam Provinces API
   const res = await axios.get('https://provinces.open-api.vn/api/p/');
   return res.data;
 };

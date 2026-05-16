@@ -4,13 +4,9 @@ import com.example.shop.dto.OrderItemRequest;
 import com.example.shop.dto.OrderItemResponse;
 import com.example.shop.dto.OrderRequest;
 import com.example.shop.dto.OrderResponse;
-import com.example.shop.entity.Order;
-import com.example.shop.entity.OrderItem;
-import com.example.shop.entity.Product;
+import com.example.shop.entity.*;
 import com.example.shop.exception.ResourceNotFoundException;
-import com.example.shop.repository.OrderItemRepository;
-import com.example.shop.repository.OrderRepository;
-import com.example.shop.repository.ProductRepository;
+import com.example.shop.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,9 +25,11 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final OrderItemRepository orderItemRepository;
-    private final com.example.shop.repository.CouponRepository couponRepository;
+    private final CouponRepository couponRepository;
     private final EmailService emailService;
-    private final com.example.shop.repository.ProductVariantRepository variantRepository;
+    private final ProductVariantRepository variantRepository;
+    private final UserRepository userRepository;
+    private final LoyaltyService loyaltyService;
 
     @Override
     @Transactional
@@ -52,69 +50,67 @@ public class OrderServiceImpl implements OrderService {
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productRepository.findById(itemReq.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm", itemReq.getProductId()));
-            
-            // Xử lý tồn kho
+
             String size = null;
             String color = null;
 
             if (itemReq.getProductVariantId() != null) {
-                com.example.shop.entity.ProductVariant variant = variantRepository.findById(itemReq.getProductVariantId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Biến thể sản phẩm", itemReq.getProductVariantId()));
-                
+                ProductVariant variant = variantRepository.findById(itemReq.getProductVariantId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Biến thể", itemReq.getProductVariantId()));
                 if (variant.getStock() < itemReq.getQuantity()) {
-                    throw new IllegalArgumentException("Biến thể '" + product.getName() + " - " + variant.getSize() + "/" + variant.getColor() + "' không đủ tồn kho (Còn: " + variant.getStock() + ").");
+                    throw new IllegalArgumentException("Biến thể '" + product.getName()
+                            + " - " + variant.getSize() + "/" + variant.getColor()
+                            + "' không đủ tồn kho (Còn: " + variant.getStock() + ").");
                 }
                 variant.setStock(variant.getStock() - itemReq.getQuantity());
                 variantRepository.save(variant);
-                
                 size = variant.getSize();
                 color = variant.getColor();
             } else {
                 if (product.getStock() < itemReq.getQuantity()) {
-                    throw new IllegalArgumentException("Sản phẩm '" + product.getName() + "' không đủ số lượng tồn kho (Còn: " + product.getStock() + ").");
+                    throw new IllegalArgumentException("Sản phẩm '" + product.getName()
+                            + "' không đủ số lượng (Còn: " + product.getStock() + ").");
                 }
                 product.setStock(product.getStock() - itemReq.getQuantity());
                 productRepository.save(product);
             }
 
-            OrderItem item = OrderItem.builder()
+            // Dùng giá hiệu lực (sale nếu đang flash sale)
+            BigDecimal unitPrice = product.getEffectivePrice();
+
+            items.add(OrderItem.builder()
                     .order(order)
                     .product(product)
                     .quantity(itemReq.getQuantity())
-                    .unitPrice(product.getPrice()) // Use DB price for security
-                    .size(size)
-                    .color(color)
+                    .unitPrice(unitPrice)
+                    .size(size).color(color)
                     .productVariantId(itemReq.getProductVariantId())
-                    .build();
-            
-            calculatedTotal = calculatedTotal.add(product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
-            items.add(item);
+                    .build());
+
+            calculatedTotal = calculatedTotal.add(unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
         }
 
-        // Xử lý mã giảm giá
+        // ─── Xử lý mã giảm giá ───
         if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-            com.example.shop.entity.Coupon coupon = couponRepository.findByCode(request.getCouponCode()).orElse(null);
-            if (coupon != null && coupon.getIsActive() && coupon.getExpirationDate().isAfter(java.time.LocalDateTime.now())) {
-                if (coupon.getMinOrderValue() == null || calculatedTotal.compareTo(coupon.getMinOrderValue()) >= 0) {
-                    if (coupon.getDiscountType() == com.example.shop.entity.Coupon.DiscountType.PERCENT) {
-                        BigDecimal discountAmount = calculatedTotal.multiply(coupon.getDiscountValue()).divide(BigDecimal.valueOf(100));
-                        calculatedTotal = calculatedTotal.subtract(discountAmount);
-                    } else if (coupon.getDiscountType() == com.example.shop.entity.Coupon.DiscountType.FIXED) {
-                        calculatedTotal = calculatedTotal.subtract(coupon.getDiscountValue());
-                    }
-                    if (calculatedTotal.compareTo(BigDecimal.ZERO) < 0) {
-                        calculatedTotal = BigDecimal.ZERO;
-                    }
-                }
+            Coupon coupon = couponRepository.findByCode(request.getCouponCode()).orElse(null);
+            if (coupon != null && coupon.isValidFor(calculatedTotal)) {
+                calculatedTotal = calculatedTotal.subtract(coupon.calculateDiscount(calculatedTotal));
+                if (calculatedTotal.compareTo(BigDecimal.ZERO) < 0) calculatedTotal = BigDecimal.ZERO;
+                // Tăng usedCount
+                coupon.setUsedCount(coupon.getUsedCount() + 1);
+                couponRepository.save(coupon);
             }
         }
 
         order.setTotalAmount(calculatedTotal);
-        order.setItems(items); // CascadeType.ALL will save items
-
+        order.setItems(items);
         Order savedOrder = orderRepository.save(order);
-        
-        // Gửi email nếu là COD (VNPay sẽ gửi email trong callback webhook)
+
+        // ─── Tích điểm loyalty ───
+        userRepository.findByEmail(request.getCustomerEmail()).ifPresent(user ->
+                loyaltyService.earnPoints(user.getId(), savedOrder.getTotalAmount(), savedOrder.getId())
+        );
+
         if ("COD".equalsIgnoreCase(savedOrder.getPaymentMethod())) {
             emailService.sendOrderConfirmationEmail(savedOrder);
         }
@@ -124,15 +120,13 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse getOrderById(Long id) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", id));
-        return mapToResponse(order);
+        return mapToResponse(orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", id)));
     }
 
     @Override
     public Page<OrderResponse> getOrdersByEmail(String email, Pageable pageable) {
-        return orderRepository.findByCustomerEmail(email, pageable)
-                .map(this::mapToResponse);
+        return orderRepository.findByCustomerEmail(email, pageable).map(this::mapToResponse);
     }
 
     @Override
@@ -140,10 +134,8 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse updateOrderStatus(Long id, String status) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng", id));
-        
         Order.OrderStatus newStatus = Order.OrderStatus.valueOf(status.toUpperCase());
-        
-        // Hoàn lại stock nếu đơn bị huỷ (và trước đó chưa bị huỷ)
+
         if (newStatus == Order.OrderStatus.CANCELLED && order.getStatus() != Order.OrderStatus.CANCELLED) {
             for (OrderItem item : order.getItems()) {
                 if (item.getProductVariantId() != null) {
@@ -158,16 +150,14 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
         }
-        
+
         order.setStatus(newStatus);
-        Order savedOrder = orderRepository.save(order);
-        return mapToResponse(savedOrder);
+        return mapToResponse(orderRepository.save(order));
     }
 
     @Override
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
-        return orderRepository.findAll(pageable)
-                .map(this::mapToResponse);
+        return orderRepository.findAll(pageable).map(this::mapToResponse);
     }
 
     private OrderResponse mapToResponse(Order order) {

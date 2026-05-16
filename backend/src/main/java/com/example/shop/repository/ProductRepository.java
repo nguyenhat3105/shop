@@ -8,29 +8,53 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // Tìm sản phẩm theo category
     List<Product> findByCategoryId(Long categoryId);
 
-    // Tìm sản phẩm liên quan (cùng category, khác id hiện tại)
     List<Product> findTop4ByCategoryIdAndIdNot(Long categoryId, Long id);
 
-    // Tìm sản phẩm theo tên (không phân biệt hoa/thường, có phân trang)
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
-    // Tìm sản phẩm theo khoảng giá
     List<Product> findByPriceBetween(BigDecimal minPrice, BigDecimal maxPrice);
 
-    // Tìm sản phẩm còn hàng
     List<Product> findByStockGreaterThan(int stock);
 
-    // Tìm kiếm full-text theo tên hoặc mô tả
     @Query("SELECT p FROM Product p WHERE " +
            "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Product> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    // ─── Flash Sale ───
+    @Query("SELECT p FROM Product p WHERE " +
+           "p.salePrice IS NOT NULL AND " +
+           "p.saleStartAt <= :now AND p.saleEndAt > :now " +
+           "ORDER BY p.saleEndAt ASC")
+    List<Product> findActiveFlashSaleProducts(@Param("now") LocalDateTime now);
+
+    // ─── Frequently Bought Together ───
+    @Query(value = """
+        SELECT oi2.product_id, COUNT(*) as co_count
+        FROM order_items oi1
+        JOIN order_items oi2 ON oi1.order_id = oi2.order_id
+        WHERE oi1.product_id = :productId
+          AND oi2.product_id != :productId
+        GROUP BY oi2.product_id
+        ORDER BY co_count DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<Object[]> findFrequentlyBoughtWithRaw(
+            @Param("productId") Long productId,
+            @Param("limit") int limit);
+
+    // ─── Batch fetch by IDs ───
+    List<Product> findByIdIn(List<Long> ids);
+
+    // ─── Inventory ───
+    List<Product> findByStockLessThanEqual(int threshold);
+    List<Product> findByStockLessThanEqualOrderByStockAsc(int threshold);
 }

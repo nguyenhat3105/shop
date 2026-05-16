@@ -35,14 +35,20 @@ public class User {
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean enabled = false;   // false cho đến khi xác thực email
+    private boolean enabled = false;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    // ─── Loyalty Points ───
+    @Column(name = "loyalty_points", nullable = false)
+    @Builder.Default
+    private Integer loyaltyPoints = 0;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.loyaltyPoints == null) this.loyaltyPoints = 0;
     }
 
     public enum Role {

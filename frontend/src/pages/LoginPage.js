@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Gem, Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
-import './AuthPage.css';
 
 export default function LoginPage() {
   const navigate  = useNavigate();
@@ -16,6 +16,15 @@ export default function LoginPage() {
   const [show, setShow]     = useState(false);
   const [loading, setLoading] = useState(false);
   const [serverErr, setServerErr] = useState('');
+  const [sessionExpired, setSessionExpired] = useState('');
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem('sessionExpiredMsg');
+    if (msg) {
+      setSessionExpired(msg);
+      sessionStorage.removeItem('sessionExpiredMsg');
+    }
+  }, []);
 
   const validate = () => {
     const e = {};
@@ -44,100 +53,108 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-page">
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 pt-16">
       {/* Left panel — decorative */}
-      <div className="auth-left">
-        <div className="auth-left__inner">
-          <div className="auth-left__logo">
-            <Gem size={22} />
-            <span>LUXE<span className="auth-left__logo-thin">SHOP</span></span>
+      <div className="hidden md:flex relative items-end p-14 overflow-hidden bg-gray-900 min-h-[calc(100vh-64px)] group">
+        <div className="relative z-20 flex flex-col gap-6">
+          <div className="flex items-center gap-2.5 text-white text-lg font-bold tracking-widest">
+            <Gem size={22} className="text-yellow-600" />
+            <span>LUXE<span className="font-light opacity-60 ml-0.5 tracking-[0.3em] text-[0.7em]">SHOP</span></span>
           </div>
-          <h2 className="auth-left__headline serif">
+          <h2 className="text-[clamp(2.6rem,4vw,4rem)] font-normal text-white leading-[1.1] font-serif">
             Chào mừng<br />trở lại
           </h2>
-          <p className="auth-left__sub">
+          <p className="text-sm text-white/55 leading-relaxed max-w-[320px]">
             Đăng nhập để tiếp tục khám phá hàng nghìn sản phẩm cao cấp.
           </p>
-          <div className="auth-left__quote">
-            <span className="quote-mark">"</span>
-            <p>Phong cách không phải là điều bạn mặc, đó là cách bạn sống.</p>
+          <div className="flex gap-3 py-4 px-5 bg-white/5 border border-white/10 border-l-[3px] border-l-yellow-600 rounded-lg mt-2">
+            <span className="font-serif text-5xl leading-none text-yellow-600 opacity-50 shrink-0 -mt-2">"</span>
+            <p className="text-[0.83rem] text-white/60 italic leading-relaxed">Phong cách không phải là điều bạn mặc, đó là cách bạn sống.</p>
           </div>
         </div>
-        <div className="auth-left__img-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/40 to-yellow-700/15 z-10" />
         <img
           src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=900&q=85"
           alt="Fashion"
-          className="auth-left__bg"
+          className="absolute inset-0 w-full h-full object-cover opacity-35 transition-transform duration-[8000ms] group-hover:scale-105"
         />
       </div>
 
       {/* Right panel — form */}
-      <div className="auth-right">
-        <div className="auth-form-wrap">
+      <div className="flex items-center justify-center p-8 md:p-12 bg-gray-50 overflow-y-auto min-h-[calc(100vh-64px)]">
+        <div className="w-full max-w-[420px] animate-fadeUp">
           {/* Header */}
-          <div className="auth-form__header">
-            <div className="auth-form__eyebrow">Đăng Nhập</div>
-            <h1 className="auth-form__title serif">Tài Khoản Của Bạn</h1>
-            <p className="auth-form__sub">
+          <div className="mb-8">
+            <div className="text-[0.62rem] font-bold tracking-[0.28em] uppercase text-yellow-700 mb-2.5">Đăng Nhập</div>
+            <h1 className="text-[clamp(1.7rem,3vw,2.4rem)] font-normal text-gray-900 leading-[1.15] mb-2 font-serif">Tài Khoản Của Bạn</h1>
+            <p className="text-[0.83rem] text-gray-500">
               Chưa có tài khoản?{' '}
-              <Link to="/register" className="auth-link">Đăng ký miễn phí</Link>
+              <Link to="/register" className="text-gray-900 font-semibold border-b border-current transition-colors hover:text-yellow-700">Đăng ký miễn phí</Link>
             </p>
           </div>
 
-          {/* Server error */}
-          {serverErr && (
-            <div className="auth-alert auth-alert--error">{serverErr}</div>
+          {/* Session expired banner */}
+          {sessionExpired && (
+            <div className="px-4 py-3 rounded-lg text-[0.82rem] mb-5 flex items-start gap-2.5 bg-orange-50 border border-orange-200 text-orange-700 animate-fadeUp">
+              <span className="text-lg leading-none">⏱</span>
+              <span>{sessionExpired}</span>
+            </div>
           )}
 
-          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+          {/* Server error */}
+          {serverErr && (
+            <div className="px-4 py-3 rounded-lg text-[0.82rem] mb-5 flex items-start gap-2 bg-red-50 border border-red-200 text-red-500 animate-fadeUp">{serverErr}</div>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
             {/* Email */}
-            <div className={`af-field ${errors.email ? 'af-field--err' : ''}`}>
-              <label className="af-label">Email</label>
+            <div className={`flex flex-col gap-1.5`}>
+              <label className="flex items-center justify-between text-[0.76rem] font-semibold tracking-wide text-gray-600">Email</label>
               <input
                 type="email"
-                className="af-input"
+                className={`w-full px-4 py-3 bg-white border-[1.5px] rounded-lg text-[0.88rem] text-gray-900 outline-none transition-all focus:ring-4 focus:ring-gray-900/5 placeholder:text-gray-400 ${errors.email ? 'border-red-400 focus:border-red-400 focus:ring-red-500/10' : 'border-gray-200 focus:border-gray-900'}`}
                 placeholder="ban@email.com"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 autoComplete="email"
                 autoFocus
               />
-              {errors.email && <p className="af-err">{errors.email}</p>}
+              {errors.email && <p className="text-[0.73rem] text-red-500">{errors.email}</p>}
             </div>
 
             {/* Password */}
-            <div className={`af-field ${errors.password ? 'af-field--err' : ''}`}>
-              <label className="af-label">
+            <div className={`flex flex-col gap-1.5`}>
+              <label className="flex items-center justify-between text-[0.76rem] font-semibold tracking-wide text-gray-600">
                 Mật Khẩu
-                <Link to="/forgot-password" className="af-label-link">Quên mật khẩu?</Link>
+                <Link to="/forgot-password" className="text-[0.72rem] font-normal text-gray-400 border-b border-transparent transition-all hover:text-yellow-700 hover:border-yellow-700">Quên mật khẩu?</Link>
               </label>
-              <div className="af-input-wrap">
+              <div className="relative">
                 <input
                   type={show ? 'text' : 'password'}
-                  className="af-input"
+                  className={`w-full px-4 py-3 bg-white border-[1.5px] rounded-lg text-[0.88rem] text-gray-900 outline-none transition-all focus:ring-4 focus:ring-gray-900/5 placeholder:text-gray-400 ${errors.password ? 'border-red-400 focus:border-red-400 focus:ring-red-500/10' : 'border-gray-200 focus:border-gray-900'}`}
                   placeholder="••••••••"
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   autoComplete="current-password"
                 />
-                <button type="button" className="af-eye" onClick={() => setShow(v => !v)}>
+                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-900 transition-colors flex items-center justify-center" onClick={() => setShow(v => !v)}>
                   {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {errors.password && <p className="af-err">{errors.password}</p>}
+              {errors.password && <p className="text-[0.73rem] text-red-500">{errors.password}</p>}
             </div>
 
             {/* Submit */}
-            <button type="submit" className="af-submit" disabled={loading}>
+            <button type="submit" className="mt-2 w-full px-4 py-3.5 bg-gray-900 text-white border-none rounded-lg text-[0.82rem] font-bold tracking-widest uppercase flex items-center justify-center gap-2 transition-all hover:bg-gray-800 hover:-translate-y-[1px] hover:shadow-lg disabled:opacity-55 disabled:cursor-not-allowed" disabled={loading}>
               {loading
-                ? <><Loader2 size={16} className="spin" /> Đang đăng nhập...</>
+                ? <><Loader2 size={16} className="animate-spin" /> Đang đăng nhập...</>
                 : <><LogIn size={16} /> Đăng Nhập</>
               }
             </button>
           </form>
 
-          <div style={{ textAlign: 'center', margin: '20px 0', fontSize: '14px', color: '#666' }}>HOẶC</div>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div className="text-center my-5 text-sm text-gray-500">HOẶC</div>
+          <div className="flex justify-center">
              <GoogleLogin
                 onSuccess={async (credentialResponse) => {
                   try {
@@ -157,9 +174,9 @@ export default function LoginPage() {
           </div>
 
           {/* Admin hint */}
-          <div className="auth-demo-hint" style={{ marginTop: '30px' }}>
-            <span className="demo-label">Tài khoản demo</span>
-            <code>admin@luxeshop.vn / Admin@12345</code>
+          <div className="mt-7 px-4 py-3.5 bg-gray-100 border border-dashed border-gray-300 rounded-lg flex flex-col gap-1">
+            <span className="text-[0.62rem] font-bold tracking-[0.18em] uppercase text-yellow-700">Tài khoản demo</span>
+            <code className="text-[0.8rem] text-gray-600 font-mono">admin@luxeshop.vn / Admin@12345</code>
           </div>
         </div>
       </div>

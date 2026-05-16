@@ -12,4 +12,5 @@ public class CouponResponse {
     private String discountType;
     private BigDecimal discountValue;
     private BigDecimal minOrderValue;
+    private BigDecimal discountAmount;
 }

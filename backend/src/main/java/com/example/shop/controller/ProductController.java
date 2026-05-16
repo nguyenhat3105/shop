@@ -9,19 +9,8 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
+import java.util.List;
 
-/**
- * REST Controller cho Product.
- *
- * Base URL : /api/products
- *
- * GET    /api/products              → Danh sách (có phân trang)
- * GET    /api/products/{id}         → Chi tiết 1 sản phẩm
- * GET    /api/products/search       → Tìm kiếm theo keyword
- * POST   /api/products              → Thêm mới
- * PUT    /api/products/{id}         → Cập nhật
- * DELETE /api/products/{id}         → Xoá
- */
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
@@ -29,147 +18,111 @@ public class ProductController {
 
     private final ProductService productService;
 
-    // ---------------------------------------------------------------
-    // GET ALL — Phân trang: ?page=0&size=12&sort=price,asc
-    // ---------------------------------------------------------------
     @GetMapping
     public ResponseEntity<Page<ProductResponse>> getAllProducts(
             @RequestParam(defaultValue = "0")   int page,
             @RequestParam(defaultValue = "12")  int size,
             @RequestParam(defaultValue = "id")  String sortBy,
-            @RequestParam(defaultValue = "asc") String direction
-    ) {
+            @RequestParam(defaultValue = "asc") String direction) {
         Sort sort = direction.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Page<ProductResponse> result = productService.getAllProducts(pageable);
-        return ResponseEntity.ok(result);
+                ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        return ResponseEntity.ok(productService.getAllProducts(PageRequest.of(page, size, sort)));
     }
 
-    // ---------------------------------------------------------------
-    // GET BY ID
-    // ---------------------------------------------------------------
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
-        ProductResponse response = productService.getProductById(id);
-        return ResponseEntity.ok(response);
-        // Nếu không tìm thấy → GlobalExceptionHandler trả 404 tự động
+        return ResponseEntity.ok(productService.getProductById(id));
     }
 
-    // ---------------------------------------------------------------
-    // SEARCH — ?keyword=áo&page=0&size=12
-    // ---------------------------------------------------------------
     @GetMapping("/search")
     public ResponseEntity<Page<ProductResponse>> searchProducts(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "12") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ProductResponse> result = productService.searchProducts(keyword, pageable);
-        return ResponseEntity.ok(result);
+            @RequestParam(defaultValue = "12") int size) {
+        return ResponseEntity.ok(productService.searchProducts(keyword, PageRequest.of(page, size)));
     }
 
-    // ---------------------------------------------------------------
-    // CREATE — POST /api/products
-    // ---------------------------------------------------------------
+    // ─── Flash Sale ───
+    @GetMapping("/flash-sale")
+    public ResponseEntity<List<ProductResponse>> getFlashSaleProducts() {
+        return ResponseEntity.ok(productService.getFlashSaleProducts());
+    }
+
+    // ─── Frequently Bought Together ───
+    @GetMapping("/{id}/frequently-bought-together")
+    public ResponseEntity<List<ProductResponse>> getFrequentlyBoughtTogether(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "4") int limit) {
+        return ResponseEntity.ok(productService.getFrequentlyBoughtTogether(id, limit));
+    }
+
+    // ─── Batch fetch by IDs (for "recently viewed") ───
+    @PostMapping("/batch")
+    public ResponseEntity<List<ProductResponse>> getProductsByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(productService.getProductsByIds(ids));
+    }
+
     @PostMapping
-    public ResponseEntity<ProductResponse> createProduct(
-            @Valid @RequestBody ProductRequest request
-    ) {
+    public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductRequest request) {
         ProductResponse created = productService.createProduct(request);
-
-        // Trả về HTTP 201 Created + Location header trỏ đến resource mới
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(created.getId())
-                .toUri();
-
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(created.getId()).toUri();
         return ResponseEntity.created(location).body(created);
     }
 
-    // ---------------------------------------------------------------
-    // UPDATE — PUT /api/products/{id}
-    // ---------------------------------------------------------------
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponse> updateProduct(
-            @PathVariable Long id,
-            @Valid @RequestBody ProductRequest request
-    ) {
-        ProductResponse updated = productService.updateProduct(id, request);
-        return ResponseEntity.ok(updated);
+            @PathVariable Long id, @Valid @RequestBody ProductRequest request) {
+        return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
-    // ---------------------------------------------------------------
-    // DELETE — DELETE /api/products/{id}
-    // ---------------------------------------------------------------
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
-        return ResponseEntity.noContent().build();  // HTTP 204 No Content
+        return ResponseEntity.noContent().build();
     }
 
-    // ---------------------------------------------------------------
-    // REVIEWS
-    // ---------------------------------------------------------------
+    // ─── Reviews ───
     @PostMapping("/{id}/reviews")
     public ResponseEntity<ReviewResponse> addReview(
             @PathVariable Long id,
             @Valid @RequestBody ReviewRequest request,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails
-    ) {
-        ReviewResponse response = productService.addReview(id, userDetails.getUsername(), request);
-        return ResponseEntity.ok(response);
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            org.springframework.security.core.userdetails.UserDetails userDetails) {
+        return ResponseEntity.ok(productService.addReview(id, userDetails.getUsername(), request));
     }
 
     @GetMapping("/{id}/reviews")
     public ResponseEntity<Page<ReviewResponse>> getReviews(
             @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(productService.getReviewsByProduct(id, pageable));
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(productService.getReviewsByProduct(id,
+                PageRequest.of(page, size, Sort.by("createdAt").descending())));
     }
 
-    // ---------------------------------------------------------------
-    // RELATED PRODUCTS
-    // ---------------------------------------------------------------
+    // ─── Related Products ───
     @GetMapping("/category/{categoryId}/related")
-    public ResponseEntity<java.util.List<ProductResponse>> getRelatedProducts(
-            @PathVariable Long categoryId,
-            @RequestParam Long excludeId
-    ) {
+    public ResponseEntity<List<ProductResponse>> getRelatedProducts(
+            @PathVariable Long categoryId, @RequestParam Long excludeId) {
         return ResponseEntity.ok(productService.getRelatedProducts(categoryId, excludeId));
     }
 
-    // ---------------------------------------------------------------
-    // VARIANT MANAGEMENT
-    // ---------------------------------------------------------------
+    // ─── Variants ───
     @GetMapping("/{id}/variants")
-    public ResponseEntity<java.util.List<com.example.shop.dto.ProductVariantDto>> getVariants(
-            @PathVariable Long id
-    ) {
+    public ResponseEntity<List<ProductVariantDto>> getVariants(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getVariantsByProduct(id));
     }
 
     @PostMapping("/{id}/variants")
-    public ResponseEntity<com.example.shop.dto.ProductVariantDto> addVariant(
-            @PathVariable Long id,
-            @RequestBody com.example.shop.dto.ProductVariantDto request
-    ) {
-        com.example.shop.dto.ProductVariantDto created = productService.addVariant(id, request);
-        return ResponseEntity.status(201).body(created);
+    public ResponseEntity<ProductVariantDto> addVariant(
+            @PathVariable Long id, @RequestBody ProductVariantDto request) {
+        return ResponseEntity.status(201).body(productService.addVariant(id, request));
     }
 
     @DeleteMapping("/{productId}/variants/{variantId}")
     public ResponseEntity<Void> deleteVariant(
-            @PathVariable Long productId,
-            @PathVariable Long variantId
-    ) {
+            @PathVariable Long productId, @PathVariable Long variantId) {
         productService.deleteVariant(productId, variantId);
         return ResponseEntity.noContent().build();
     }

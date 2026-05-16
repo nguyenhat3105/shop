@@ -158,22 +158,50 @@ public class DataSeeder implements CommandLineRunner {
             Coupon c1 = Coupon.builder()
                     .code("TET2026")
                     .discountType(Coupon.DiscountType.PERCENT)
-                    .discountValue(new BigDecimal("10")) // 10%
+                    .discountValue(new BigDecimal("10"))
                     .minOrderValue(new BigDecimal("500000"))
                     .expirationDate(LocalDateTime.now().plusMonths(1))
                     .isActive(true)
+                    .maxUsage(100).usedCount(0)
                     .build();
-
             Coupon c2 = Coupon.builder()
                     .code("FREESHIP")
                     .discountType(Coupon.DiscountType.FIXED)
-                    .discountValue(new BigDecimal("30000")) // 30.000 VNĐ
+                    .discountValue(new BigDecimal("30000"))
                     .minOrderValue(new BigDecimal("0"))
                     .expirationDate(LocalDateTime.now().plusMonths(2))
                     .isActive(true)
+                    .usedCount(0)
                     .build();
+            Coupon c3 = Coupon.builder()
+                    .code("WELCOME50K")
+                    .discountType(Coupon.DiscountType.FIXED)
+                    .discountValue(new BigDecimal("50000"))
+                    .minOrderValue(new BigDecimal("300000"))
+                    .expirationDate(LocalDateTime.now().plusMonths(3))
+                    .isActive(true)
+                    .maxUsage(500).usedCount(0)
+                    .build();
+            couponRepository.saveAll(List.of(c1, c2, c3));
+        }
 
-            couponRepository.saveAll(List.of(c1, c2));
+        // 6. Flash Sale Products
+        if (productRepository.count() > 0) {
+            List<com.example.shop.entity.Product> allProds = productRepository.findAll();
+            boolean hasFlashSale = allProds.stream().anyMatch(p -> p.getSalePrice() != null);
+            if (!hasFlashSale && allProds.size() >= 2) {
+                // Giảm giá iPhone 30%
+                com.example.shop.entity.Product p1 = allProds.get(0);
+                p1.setSalePrice(p1.getPrice().multiply(new BigDecimal("0.7")));
+                p1.setSaleStartAt(LocalDateTime.now().minusHours(1));
+                p1.setSaleEndAt(LocalDateTime.now().plusHours(23));
+                // Giảm giá Laptop 20%
+                com.example.shop.entity.Product p2 = allProds.get(1);
+                p2.setSalePrice(p2.getPrice().multiply(new BigDecimal("0.8")));
+                p2.setSaleStartAt(LocalDateTime.now().minusHours(1));
+                p2.setSaleEndAt(LocalDateTime.now().plusHours(11));
+                productRepository.saveAll(List.of(p1, p2));
+            }
         }
 
         System.out.println("Tạo dữ liệu mẫu thành công!");

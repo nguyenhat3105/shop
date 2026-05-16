@@ -4,7 +4,6 @@ import {
   Gem, Shield, Truck, RotateCcw, Star, Users, Package, Award,
   ArrowRight, CheckCircle, Quote
 } from 'lucide-react';
-import './AboutPage.css';
 
 const STATS = [
   { icon: Users,   value: '50K+',  label: 'Khách hàng tin tưởng' },
@@ -83,41 +82,44 @@ const TESTIMONIALS = [
 
 export default function AboutPage() {
   return (
-    <div className="page about">
+    <div className="w-full">
 
       {/* ════════════ HERO ════════════ */}
-      <section className="ab-hero">
-        <div className="ab-hero__bg" />
-        <div className="container ab-hero__content">
-          <div className="ab-hero__left anim-up">
-            <p className="section-eyebrow">Về Chúng Tôi</p>
-            <h1 className="ab-hero__title serif">
+      <section className="relative min-h-[auto] md:min-h-[88vh] flex items-center overflow-hidden border-b border-border bg-bg-2 py-8 md:py-0">
+        <div 
+          className="absolute inset-0 opacity-[0.06] pointer-events-none bg-center bg-cover bg-no-repeat" 
+          style={{backgroundImage: "url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&q=80')"}} 
+        />
+        <div className="container mx-auto px-4 relative z-10 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center py-8 md:py-12">
+          <div className="animate-fadeUp">
+            <p className="text-[0.65rem] font-semibold tracking-[0.2em] uppercase text-accent mb-4">Về Chúng Tôi</p>
+            <h1 className="font-serif text-[clamp(2.6rem,4.5vw,4.2rem)] font-normal leading-[1.1] text-text my-3 md:my-5">
               Câu Chuyện <br />
-              <em>Đằng Sau</em> LuxeShop
+              <em className="italic text-accent">Đằng Sau</em> LuxeShop
             </h1>
-            <p className="ab-hero__desc">
+            <p className="text-[0.92rem] text-text-2 leading-[1.8] max-w-[440px] mb-8">
               Thành lập năm 2020, LuxeShop ra đời từ niềm đam mê với những sản phẩm chất lượng cao
               và mong muốn mang đến trải nghiệm mua sắm sang trọng cho mọi người Việt Nam.
             </p>
-            <div className="ab-hero__ctas">
-              <Link to="/categories" className="btn btn-gold">
+            <div className="flex gap-3 flex-wrap">
+              <Link to="/categories" className="btn bg-accent text-white hover:bg-accent-light">
                 Khám Phá Sản Phẩm <ArrowRight size={15} />
               </Link>
               <a href="#story" className="btn btn-outline">Đọc Câu Chuyện</a>
             </div>
           </div>
 
-          <div className="ab-hero__right anim-up delay-2">
-            <div className="ab-hero__img-stack">
+          <div className="hidden md:block relative h-[500px] animate-fadeUp delay-200">
+            <div className="relative h-[500px]">
               <img
                 src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80"
-                alt="Store" className="ab-hero__img ab-hero__img--main"
+                alt="Store" className="w-full h-full border border-border rounded-xl object-cover"
               />
               <img
                 src="https://images.unsplash.com/photo-1555529771-7888783a18d3?w=300&q=80"
-                alt="Products" className="ab-hero__img ab-hero__img--float"
+                alt="Products" className="absolute -bottom-8 -left-8 w-[170px] h-[190px] border-[3px] border-surface rounded-lg shadow-[0_16px_40px_rgba(0,0,0,0.12)] animate-floatY object-cover"
               />
-              <div className="ab-hero__badge">
+              <div className="absolute top-6 -right-3 flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.08)] text-accent text-[0.75rem] font-semibold tracking-[0.06em] animate-[floatY_4s_1s_ease-in-out_infinite]">
                 <Gem size={16} />
                 <span>Premium Quality</span>
               </div>
@@ -127,60 +129,60 @@ export default function AboutPage() {
       </section>
 
       {/* ════════════ STATS ════════════ */}
-      <section className="ab-stats">
-        <div className="container ab-stats__grid">
+      <section className="py-12 bg-surface border-b border-border">
+        <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4">
           {STATS.map((s, i) => (
-            <div key={i} className={`ab-stat anim-up delay-${i + 1}`}>
-              <div className="ab-stat__icon"><s.icon size={20} /></div>
-              <span className="ab-stat__value serif">{s.value}</span>
-              <span className="ab-stat__label">{s.label}</span>
+            <div key={i} className={`flex flex-col items-center text-center p-8 border-b md:border-b-0 border-r-0 sm:even:border-r-0 md:even:border-r border-border sm:border-r ${i === STATS.length - 1 ? 'md:border-r-0' : ''} animate-fadeUp`}>
+              <div className="w-[42px] h-[42px] bg-accent/10 border border-accent/20 rounded-[10px] flex items-center justify-center text-accent mb-2.5"><s.icon size={20} /></div>
+              <span className="font-serif text-3xl font-semibold text-text leading-none mb-1">{s.value}</span>
+              <span className="text-[0.75rem] text-text-muted">{s.label}</span>
             </div>
           ))}
         </div>
       </section>
 
       {/* ════════════ STORY ════════════ */}
-      <section className="ab-story container" id="story">
-        <div className="ab-story__left anim-up">
-          <div className="ab-story__img-wrap">
-            <img src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=600&q=80" alt="Our story" />
-            <div className="ab-story__img-border" />
+      <section className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center py-24" id="story">
+        <div className="hidden md:block animate-fadeUp">
+          <div className="relative">
+            <img src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=600&q=80" alt="Our story" className="w-full rounded-xl border border-border object-cover aspect-[4/5]" />
+            <div className="absolute -inset-2.5 border border-accent/20 rounded-[24px] pointer-events-none" />
           </div>
         </div>
-        <div className="ab-story__right anim-up delay-2">
-          <p className="section-eyebrow">Hành Trình Của Chúng Tôi</p>
-          <h2 className="section-title" style={{marginTop:'0.75rem',marginBottom:'1.5rem'}}>
-            Từ Một Ý Tưởng<br /><em className="serif" style={{fontStyle:'italic',color:'var(--gold)'}}>Đến Thực Tế</em>
+        <div className="animate-fadeUp delay-200">
+          <p className="text-[0.65rem] font-semibold tracking-[0.2em] uppercase text-accent mb-4">Hành Trình Của Chúng Tôi</p>
+          <h2 className="font-serif text-[clamp(1.8rem,3vw,2.5rem)] font-medium text-text mb-6 mt-3">
+            Từ Một Ý Tưởng<br /><em className="serif italic text-accent">Đến Thực Tế</em>
           </h2>
-          <p className="ab-story__text">
+          <p className="text-[0.88rem] text-text-2 leading-[1.8] mb-4">
             Năm 2020, trong thời điểm đại dịch khiến mọi người phải ở nhà, ba người bạn nhận ra rằng
             mua sắm trực tuyến tại Việt Nam còn thiếu đi sự tinh tế và trải nghiệm cao cấp.
           </p>
-          <p className="ab-story__text">
+          <p className="text-[0.88rem] text-text-2 leading-[1.8] mb-4">
             Từ căn phòng nhỏ ở Sài Gòn, LuxeShop ra đời với chỉ 50 sản phẩm đầu tiên. Ngày nay,
             chúng tôi tự hào phục vụ hơn 50.000 khách hàng trên khắp Việt Nam với hơn 1.200 sản phẩm.
           </p>
-          <ul className="ab-story__checks">
+          <ul className="list-none flex flex-col gap-2.5 mt-6">
             {['Sản phẩm 100% chính hãng', 'Kiểm định chất lượng nghiêm ngặt', 'Đối tác từ 50+ thương hiệu uy tín'].map(t => (
-              <li key={t}><CheckCircle size={15} /> {t}</li>
+              <li key={t} className="flex items-center gap-2.5 text-[0.83rem] text-text-2"><CheckCircle size={15} className="text-success shrink-0" /> {t}</li>
             ))}
           </ul>
         </div>
       </section>
 
       {/* ════════════ VALUES ════════════ */}
-      <section className="ab-values">
-        <div className="container">
-          <div className="ab-values__head">
-            <p className="section-eyebrow">Cam Kết Của Chúng Tôi</p>
-            <h2 className="section-title ab-values__title">Giá Trị Cốt Lõi</h2>
+      <section className="py-20 bg-bg-2 border-y border-border">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <p className="text-[0.65rem] font-semibold tracking-[0.2em] uppercase text-accent mb-4">Cam Kết Của Chúng Tôi</p>
+            <h2 className="font-serif text-[clamp(1.8rem,3vw,2.5rem)] font-medium text-text mt-3">Giá Trị Cốt Lõi</h2>
           </div>
-          <div className="ab-values__grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
             {VALUES.map((v, i) => (
-              <div key={i} className={`ab-val anim-up delay-${i + 1}`}>
-                <div className="ab-val__icon"><v.icon size={22} /></div>
-                <h3 className="ab-val__title">{v.title}</h3>
-                <p className="ab-val__desc">{v.desc}</p>
+              <div key={i} className="p-7 bg-surface border border-border rounded-lg transition-all hover:border-accent/30 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] animate-fadeUp">
+                <div className="w-[44px] h-[44px] bg-accent/10 border border-accent/20 rounded-[10px] flex items-center justify-center text-accent mb-4"><v.icon size={22} /></div>
+                <h3 className="text-[0.95rem] font-semibold text-text mb-2">{v.title}</h3>
+                <p className="text-[0.8rem] text-text-muted leading-[1.7]">{v.desc}</p>
               </div>
             ))}
           </div>
@@ -188,23 +190,23 @@ export default function AboutPage() {
       </section>
 
       {/* ════════════ TEAM ════════════ */}
-      <section className="ab-team container">
-        <div className="ab-team__head">
-          <p className="section-eyebrow">Con Người</p>
-          <h2 className="section-title">Đội Ngũ Sáng Lập</h2>
+      <section className="py-24 container mx-auto px-4">
+        <div className="text-center mb-12">
+          <p className="text-[0.65rem] font-semibold tracking-[0.2em] uppercase text-accent mb-4">Con Người</p>
+          <h2 className="font-serif text-[clamp(1.8rem,3vw,2.5rem)] font-medium text-text">Đội Ngũ Sáng Lập</h2>
         </div>
-        <div className="ab-team__grid">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {TEAM.map((m, i) => (
-            <div key={i} className={`ab-member anim-up delay-${i + 1}`}>
-              <div className="ab-member__img-wrap">
-                <img src={m.img} alt={m.name} className="ab-member__img" />
-                <div className="ab-member__img-ring" />
+            <div key={i} className="bg-surface border border-border rounded-xl p-8 text-center transition-all hover:border-border-2 hover:shadow-[0_8px_28px_rgba(0,0,0,0.07)] animate-fadeUp">
+              <div className="relative w-[90px] h-[90px] mx-auto mb-4">
+                <img src={m.img} alt={m.name} className="w-[90px] h-[90px] rounded-full object-cover border-2 border-border" />
+                <div className="absolute -inset-1 rounded-full border border-accent/25" />
               </div>
-              <h3 className="ab-member__name">{m.name}</h3>
-              <p className="ab-member__role">{m.role}</p>
-              <div className="ab-member__quote">
-                <Quote size={14} className="ab-member__quote-icon" />
-                <p>{m.quote}</p>
+              <h3 className="text-[0.95rem] font-semibold text-text mb-1">{m.name}</h3>
+              <p className="text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-accent mb-3.5">{m.role}</p>
+              <div className="flex gap-2 bg-bg-2 border border-border rounded p-3 text-left">
+                <Quote size={14} className="text-accent shrink-0 mt-[2px]" />
+                <p className="text-[0.76rem] text-text-muted leading-[1.6] italic">{m.quote}</p>
               </div>
             </div>
           ))}
@@ -212,26 +214,26 @@ export default function AboutPage() {
       </section>
 
       {/* ════════════ TESTIMONIALS ════════════ */}
-      <section className="ab-reviews">
-        <div className="container">
-          <div className="ab-reviews__head">
-            <p className="section-eyebrow">Đánh Giá</p>
-            <h2 className="section-title">Khách Hàng Nói Gì?</h2>
+      <section className="py-20 border-t border-border">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <p className="text-[0.65rem] font-semibold tracking-[0.2em] uppercase text-accent mb-4">Đánh Giá</p>
+            <h2 className="font-serif text-[clamp(1.8rem,3vw,2.5rem)] font-medium text-text">Khách Hàng Nói Gì?</h2>
           </div>
-          <div className="ab-reviews__grid">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {TESTIMONIALS.map((t, i) => (
-              <div key={i} className={`ab-review anim-up delay-${i + 1}`}>
-                <div className="ab-review__stars">
+              <div key={i} className="bg-surface border border-border rounded-lg p-7 flex flex-col gap-3.5 transition-all hover:border-border-2 hover:shadow-[0_6px_20px_rgba(0,0,0,0.06)] animate-fadeUp">
+                <div className="flex gap-[3px] text-[#d4a843]">
                   {[...Array(t.rating)].map((_, j) => (
                     <Star key={j} size={13} fill="currentColor" />
                   ))}
                 </div>
-                <p className="ab-review__text">"{t.text}"</p>
-                <div className="ab-review__author">
-                  <img src={t.img} alt={t.name} className="ab-review__avatar" />
+                <p className="text-[0.85rem] text-text-2 leading-[1.7] flex-1">"{t.text}"</p>
+                <div className="flex items-center gap-2.5 pt-3.5 border-t border-border">
+                  <img src={t.img} alt={t.name} className="w-[38px] h-[38px] rounded-full object-cover border border-border" />
                   <div>
-                    <p className="ab-review__name">{t.name}</p>
-                    <p className="ab-review__role">{t.role}</p>
+                    <p className="text-[0.82rem] font-semibold text-text">{t.name}</p>
+                    <p className="text-[0.7rem] text-text-muted">{t.role}</p>
                   </div>
                 </div>
               </div>
@@ -241,13 +243,13 @@ export default function AboutPage() {
       </section>
 
       {/* ════════════ CTA BANNER ════════════ */}
-      <section className="ab-cta container">
-        <div className="ab-cta__box">
-          <div className="ab-cta__glow" />
-          <Gem size={32} className="ab-cta__icon" />
-          <h2 className="serif ab-cta__title">Sẵn Sàng Trải Nghiệm LuxeShop?</h2>
-          <p className="ab-cta__desc">Khám phá hàng nghìn sản phẩm cao cấp được tuyển chọn kỹ lưỡng.</p>
-          <Link to="/categories" className="btn btn-gold">
+      <section className="py-20 pb-24 container mx-auto px-4">
+        <div className="relative flex flex-col items-center text-center gap-4 px-8 py-16 bg-brand rounded-xl overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] pointer-events-none bg-[radial-gradient(ellipse,rgba(184,149,90,0.15)_0%,transparent_70%)]" />
+          <Gem size={32} className="text-accent-light relative z-10" />
+          <h2 className="font-serif text-[clamp(1.7rem,3vw,2.8rem)] font-normal text-white relative z-10">Sẵn Sàng Trải Nghiệm LuxeShop?</h2>
+          <p className="text-[0.88rem] text-white/55 max-w-[380px] relative z-10">Khám phá hàng nghìn sản phẩm cao cấp được tuyển chọn kỹ lưỡng.</p>
+          <Link to="/categories" className="btn bg-accent text-white hover:bg-accent-light relative z-10">
             Mua Sắm Ngay <ArrowRight size={15} />
           </Link>
         </div>

@@ -55,9 +55,25 @@ public class SecurityConfig {
                 // ── Addresses: cần đăng nhập ──
                 .requestMatchers("/api/addresses/**").authenticated()
 
+                // ── Loyalty Points: cần đăng nhập ──
+                .requestMatchers("/api/loyalty/**").authenticated()
+
+                // ── Shipping: public ──
+                .requestMatchers("/api/shipping/**").permitAll()
+
                 // ── User profile ──
                 .requestMatchers("/api/users/me").authenticated()
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
+
+                // ── Admin: inventory, export, analytics ──
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                // ── Coupons: validate public, manage ADMIN ──
+                .requestMatchers(HttpMethod.GET, "/api/coupons/validate").authenticated()
+                .requestMatchers("/api/coupons/**").hasRole("ADMIN")
+
+                // ── WebSocket handshake ──
+                .requestMatchers("/ws/**").permitAll()
 
                 .anyRequest().authenticated()
             )

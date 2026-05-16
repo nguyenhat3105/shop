@@ -2,10 +2,8 @@ package com.example.shop.dto;
 
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
-/**
- * DTO trả về cho client — che giấu quan hệ JPA Lazy, tránh vòng lặp vô hạn JSON.
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,17 +17,19 @@ public class ProductResponse {
     private Integer stock;
     private String imageUrl;
 
-    // Chỉ trả về thông tin cơ bản của Category, không embed toàn bộ object
     private Long categoryId;
     private String categoryName;
 
-    // Đánh giá
     private Double averageRating;
     private Long reviewCount;
 
-    // Hình ảnh phụ
     private java.util.List<String> galleryImages;
-
-    // Biến thể
     private java.util.List<ProductVariantDto> variants;
+
+    // ─── Flash Sale ───
+    private BigDecimal salePrice;
+    private LocalDateTime saleStartAt;
+    private LocalDateTime saleEndAt;
+    private Boolean onSale;          // true nếu đang trong thời gian flash sale
+    private BigDecimal effectivePrice; // giá hiệu lực: salePrice nếu onSale, else price
 }

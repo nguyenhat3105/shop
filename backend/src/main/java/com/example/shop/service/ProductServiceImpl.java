@@ -9,14 +9,12 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Toàn bộ business logic cho Product nằm ở đây.
- * Controller không xử lý logic — chỉ gọi Service và trả kết quả.
- */
 @Service
-@RequiredArgsConstructor   // Lombok tự tạo constructor inject tất cả final fields
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProductServiceImpl implements ProductService {
 
@@ -25,34 +23,22 @@ public class ProductServiceImpl implements ProductService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final ProductImageRepository productImageRepository;
-    private final com.example.shop.repository.ProductVariantRepository productVariantRepository;
+    private final ProductVariantRepository productVariantRepository;
 
-    // ---------------------------------------------------------------
-    // GET ALL — có phân trang
-    // ---------------------------------------------------------------
     @Override
     public Page<ProductResponse> getAllProducts(Pageable pageable) {
-        return productRepository.findAll(pageable)
-                .map(this::toResponse);
+        return productRepository.findAll(pageable).map(this::toResponse);
     }
 
-    // ---------------------------------------------------------------
-    // GET BY ID
-    // ---------------------------------------------------------------
     @Override
     public ProductResponse getProductById(Long id) {
-        Product product = findProductOrThrow(id);
-        return toResponse(product);
+        return toResponse(findProductOrThrow(id));
     }
 
-    // ---------------------------------------------------------------
-    // CREATE
-    // ---------------------------------------------------------------
     @Override
     @Transactional
     public ProductResponse createProduct(ProductRequest request) {
         Category category = findCategoryOrThrow(request.getCategoryId());
-
         Product product = Product.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -61,73 +47,48 @@ public class ProductServiceImpl implements ProductService {
                 .imageUrl(request.getImageUrl())
                 .category(category)
                 .build();
-
         Product saved = productRepository.save(product);
-
-        // Lưu gallery images
         if (request.getGalleryImages() != null && !request.getGalleryImages().isEmpty()) {
             for (String imgUrl : request.getGalleryImages()) {
                 productImageRepository.save(ProductImage.builder()
-                        .product(saved)
-                        .imageUrl(imgUrl)
-                        .build());
+                        .product(saved).imageUrl(imgUrl).build());
             }
         }
-
         return toResponse(saved);
     }
 
-    // ---------------------------------------------------------------
-    // UPDATE
-    // ---------------------------------------------------------------
     @Override
     @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = findProductOrThrow(id);
         Category category = findCategoryOrThrow(request.getCategoryId());
-
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setStock(request.getStock());
         product.setImageUrl(request.getImageUrl());
         product.setCategory(category);
-
         Product saved = productRepository.save(product);
-
-        // Cập nhật gallery images
         if (request.getGalleryImages() != null) {
-            List<ProductImage> oldImages = productImageRepository.findByProductId(saved.getId());
-            productImageRepository.deleteAll(oldImages);
-
+            productImageRepository.deleteAll(productImageRepository.findByProductId(saved.getId()));
             for (String imgUrl : request.getGalleryImages()) {
                 productImageRepository.save(ProductImage.builder()
-                        .product(saved)
-                        .imageUrl(imgUrl)
-                        .build());
+                        .product(saved).imageUrl(imgUrl).build());
             }
         }
-
         return toResponse(saved);
     }
 
-    // ---------------------------------------------------------------
-    // DELETE
-    // ---------------------------------------------------------------
     @Override
     @Transactional
     public void deleteProduct(Long id) {
-        findProductOrThrow(id);  // Đảm bảo tồn tại trước khi xoá
+        findProductOrThrow(id);
         productRepository.deleteById(id);
     }
 
-    // ---------------------------------------------------------------
-    // SEARCH
-    // ---------------------------------------------------------------
     @Override
     public Page<ProductResponse> searchProducts(String keyword, Pageable pageable) {
-        return productRepository.searchByKeyword(keyword, pageable)
-                .map(this::toResponse);
+        return productRepository.searchByKeyword(keyword, pageable).map(this::toResponse);
     }
 
     @Override
@@ -136,105 +97,91 @@ public class ProductServiceImpl implements ProductService {
         Product product = findProductOrThrow(productId);
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy user."));
-
         Review review = Review.builder()
-                .product(product)
-                .user(user)
-                .rating(request.getRating())
-                .comment(request.getComment())
+                .product(product).user(user)
+                .rating(request.getRating()).comment(request.getComment())
                 .build();
-        
-        Review saved = reviewRepository.save(review);
-        return toReviewResponse(saved);
+        return toReviewResponse(reviewRepository.save(review));
     }
 
     @Override
     public Page<ReviewResponse> getReviewsByProduct(Long productId, Pageable pageable) {
-        return reviewRepository.findByProductId(productId, pageable)
-                .map(this::toReviewResponse);
+        return reviewRepository.findByProductId(productId, pageable).map(this::toReviewResponse);
     }
 
-    // ---------------------------------------------------------------
-    // RELATED PRODUCTS
-    // ---------------------------------------------------------------
     @Override
     public List<ProductResponse> getRelatedProducts(Long categoryId, Long productId) {
         return productRepository.findTop4ByCategoryIdAndIdNot(categoryId, productId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+                .stream().map(this::toResponse).toList();
     }
 
-    // ---------------------------------------------------------------
-    // VARIANT MANAGEMENT
-    // ---------------------------------------------------------------
     @Override
     public List<ProductVariantDto> getVariantsByProduct(Long productId) {
         findProductOrThrow(productId);
         return productVariantRepository.findByProductId(productId)
-                .stream()
-                .map(v -> ProductVariantDto.builder()
-                        .id(v.getId())
-                        .size(v.getSize())
-                        .color(v.getColor())
-                        .stock(v.getStock())
-                        .build())
-                .toList();
+                .stream().map(this::toVariantDto).toList();
     }
 
     @Override
     @Transactional
     public ProductVariantDto addVariant(Long productId, ProductVariantDto request) {
         Product product = findProductOrThrow(productId);
-        com.example.shop.entity.ProductVariant variant = com.example.shop.entity.ProductVariant.builder()
-                .product(product)
-                .size(request.getSize())
+        ProductVariant variant = ProductVariant.builder()
+                .product(product).size(request.getSize())
                 .color(request.getColor())
                 .stock(request.getStock() != null ? request.getStock() : 0)
                 .build();
-        com.example.shop.entity.ProductVariant saved = productVariantRepository.save(variant);
-        return ProductVariantDto.builder()
-                .id(saved.getId())
-                .size(saved.getSize())
-                .color(saved.getColor())
-                .stock(saved.getStock())
-                .build();
+        return toVariantDto(productVariantRepository.save(variant));
     }
 
     @Override
     @Transactional
     public void deleteVariant(Long productId, Long variantId) {
-        com.example.shop.entity.ProductVariant variant = productVariantRepository.findById(variantId)
-                .orElseThrow(() -> new com.example.shop.exception.ResourceNotFoundException("Biến thể", variantId));
-        if (!variant.getProduct().getId().equals(productId)) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Biến thể", variantId));
+        if (!variant.getProduct().getId().equals(productId))
             throw new IllegalArgumentException("Biến thể không thuộc sản phẩm này.");
-        }
         productVariantRepository.deleteById(variantId);
     }
 
+    // ─── Flash Sale ───
+    @Override
+    public List<ProductResponse> getFlashSaleProducts() {
+        return productRepository.findActiveFlashSaleProducts(LocalDateTime.now())
+                .stream().map(this::toResponse).toList();
+    }
 
-    // ---------------------------------------------------------------
+    // ─── Frequently Bought Together ───
+    @Override
+    public List<ProductResponse> getFrequentlyBoughtTogether(Long productId, int limit) {
+        List<Object[]> rows = productRepository.findFrequentlyBoughtWithRaw(productId, limit);
+        if (rows.isEmpty()) {
+            // Fallback: lấy sản phẩm cùng category
+            Product p = findProductOrThrow(productId);
+            return getRelatedProducts(p.getCategory().getId(), productId);
+        }
+        List<Long> ids = rows.stream()
+                .map(row -> ((Number) row[0]).longValue())
+                .toList();
+        return productRepository.findByIdIn(ids).stream().map(this::toResponse).toList();
+    }
 
-    /** Chuyển Entity → DTO Response (tránh trả Lazy object về Controller) */
+    @Override
+    public List<ProductResponse> getProductsByIds(List<Long> ids) {
+        return productRepository.findByIdIn(ids).stream().map(this::toResponse).toList();
+    }
+
+    // ─── Private helpers ───
     private ProductResponse toResponse(Product p) {
         Double avgRating = reviewRepository.getAverageRatingByProductId(p.getId());
         Long reviewCount = reviewRepository.countByProductId(p.getId());
-        
         List<String> images = productImageRepository.findByProductId(p.getId())
-                .stream()
-                .map(ProductImage::getImageUrl)
-                .toList();
+                .stream().map(ProductImage::getImageUrl).toList();
+        List<ProductVariantDto> variantDtos = p.getVariants() != null
+                ? p.getVariants().stream().map(this::toVariantDto).toList()
+                : new ArrayList<>();
 
-        List<ProductVariantDto> variantDtos = p.getVariants() != null ? 
-                p.getVariants().stream()
-                 .map(v -> ProductVariantDto.builder()
-                        .id(v.getId())
-                        .size(v.getSize())
-                        .color(v.getColor())
-                        .stock(v.getStock())
-                        .build())
-                 .toList() : new java.util.ArrayList<>();
-
+        boolean onSale = p.isOnSale();
         return ProductResponse.builder()
                 .id(p.getId())
                 .name(p.getName())
@@ -248,18 +195,27 @@ public class ProductServiceImpl implements ProductService {
                 .reviewCount(reviewCount)
                 .galleryImages(images)
                 .variants(variantDtos)
+                // Flash sale fields
+                .salePrice(p.getSalePrice())
+                .saleStartAt(p.getSaleStartAt())
+                .saleEndAt(p.getSaleEndAt())
+                .onSale(onSale)
+                .effectivePrice(p.getEffectivePrice())
                 .build();
     }
 
     private ReviewResponse toReviewResponse(Review r) {
         return ReviewResponse.builder()
-                .id(r.getId())
-                .userId(r.getUser().getId())
+                .id(r.getId()).userId(r.getUser().getId())
                 .userName(r.getUser().getFullName())
-                .rating(r.getRating())
-                .comment(r.getComment())
-                .createdAt(r.getCreatedAt())
-                .build();
+                .rating(r.getRating()).comment(r.getComment())
+                .createdAt(r.getCreatedAt()).build();
+    }
+
+    private ProductVariantDto toVariantDto(ProductVariant v) {
+        return ProductVariantDto.builder()
+                .id(v.getId()).size(v.getSize())
+                .color(v.getColor()).stock(v.getStock()).build();
     }
 
     private Product findProductOrThrow(Long id) {
